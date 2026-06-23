@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\"; $b64 = [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(\"logo_ciberian.jpg\"\\)\\); [IO.File]::WriteAllText\\(\"logo_b64.txt\", $b64\\); Write-Host \"Base64 length: $\\($b64.Length\\)\")",
+      "PowerShell(cd \"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\"; $b64 = [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(\"logo_ciberian.jpg\"\\)\\); [IO.File]::WriteAllText\\(\"logo_b64.txt\", $b64\\))",
+      "PowerShell(node --version)",
+      "PowerShell(pnpm --version)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\" | Where-Object { $_.Name -notmatch \"^\\(\\\\.claude|ACT|Atestado|ETP|TR\\)\" } | Select-Object Name)",
+      "Read(//c/Users/raimundo.araujo/.claude/plans/**)",
+      "PowerShell($b64 = [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\\\\logo_ciberian.jpg\"\\)\\); [IO.File]::WriteAllText\\(\"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\\\\logo_b64.txt\", $b64\\); Write-Host \"Base64 length: $\\($b64.Length\\)\")",
+      "PowerShell(node \"C:\\\\Users\\\\raimundo.araujo\\\\Documents\\\\Projetos\\\\payproxy\\\\gen-html.js\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\raimundo.araujo\\.claude\\plans"
+    ]
+  }
+}

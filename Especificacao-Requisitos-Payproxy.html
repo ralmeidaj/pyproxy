@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Especificação de Requisitos — Plataforma Payproxy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; background: #fff; max-width: 900px; margin: 0 auto; padding: 40px 48px; }
+
+  .doc-logo { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  .doc-logo img { height: 125px; width: auto; display: block; }
+
+  .doc-title-block { border-bottom: 3px solid #1a6fb5; padding-bottom: 12px; margin-bottom: 20px; }
+  .doc-title-block h1 { font-size: 20pt; font-weight: 700; color: #1a2a4a; border: none; padding: 0; margin: 0 0 2px 0; }
+  .doc-title-block .doc-subtitle { font-size: 13pt; color: #555; font-weight: 400; }
+
+  h1 { font-size: 20pt; font-weight: 700; color: #1a2a4a; border-bottom: 3px solid #1a6fb5; padding-bottom: 10px; margin-bottom: 24px; margin-top: 0; }
+  h2 { font-size: 14pt; font-weight: 700; color: #1a2a4a; border-bottom: 1.5px solid #d0dae8; padding-bottom: 6px; margin-top: 36px; margin-bottom: 16px; }
+  h3 { font-size: 12pt; font-weight: 700; color: #1a4a6b; margin-top: 28px; margin-bottom: 12px; }
+  h4 { font-size: 11pt; font-weight: 700; color: #2a5a7a; margin-top: 20px; margin-bottom: 10px; }
+  p { margin-bottom: 12px; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  code { font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; background: #f0f4f8; border: 1px solid #ccd6e0; border-radius: 3px; padding: 1px 5px; color: #1a3a5a; }
+  ul, ol { margin: 8px 0 12px 24px; }
+  li { margin-bottom: 4px; }
+  li > ul { margin-top: 4px; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; }
+  th { background: #1a2a4a; color: #fff; font-weight: 700; padding: 8px 12px; text-align: left; border: 1px solid #1a2a4a; }
+  td { padding: 7px 12px; border: 1px solid #ccd6e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f8fc; }
+  hr { border: none; border-top: 1px solid #d0dae8; margin: 24px 0; }
+
+  .req { background: #f7fafd; border-left: 4px solid #1a6fb5; padding: 0; margin-bottom: 10px; border-radius: 0 4px 4px 0; overflow: hidden; }
+  .req-rnf { background: #f7fdf7; border-left: 4px solid #2a7a2a; }
+  .req-rn  { background: #fdf7f0; border-left: 4px solid #c47a00; }
+
+  .req-header { display: flex; align-items: flex-start; gap: 8px; padding: 8px 14px; cursor: pointer; user-select: none; }
+  .req-header::before { content: '▼'; font-size: 8pt; color: #888; flex-shrink: 0; margin-top: 3px; line-height: 1.4; }
+  .req.collapsed .req-header::before { content: '▶'; }
+  .req-header--simple { cursor: default; }
+  .req-header--simple::before { content: '—'; color: #ccc; }
+
+  .req-body { padding: 0 14px 10px 30px; overflow: hidden; max-height: 4000px; opacity: 1; transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease; }
+  .req.collapsed .req-body { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+
+  .sec-heading { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
+  .sec-heading::before { content: '▼'; font-size: 8pt; color: #aaa; flex-shrink: 0; }
+  .sec-heading.sec-collapsed::before { content: '▶'; }
+  .sec-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.25s ease; max-height: 20000px; opacity: 1; }
+  .sec-body.sec-collapsed { max-height: 0; opacity: 0; }
+
+  .toolbar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.96); backdrop-filter: blur(4px); border-bottom: 1px solid #d0dae8; padding: 8px 0; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .toolbar-sep { width: 1px; height: 20px; background: #d0dae8; margin: 0 4px; }
+  .toolbar-label { font-size: 9pt; color: #666; }
+  .btn { font-size: 9pt; padding: 4px 12px; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; font-family: inherit; background: transparent; transition: background 0.15s, color 0.15s; }
+  .btn-blue  { color: #1a6fb5; }
+  .btn-green { color: #2a7a2a; }
+  .btn-amber { color: #c47a00; }
+  .btn-grey  { color: #555; }
+  .btn:hover { background: currentColor; color: #fff; }
+  .legend { display: flex; gap: 12px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  .chip { display: inline-block; font-size: 8pt; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .chip-rf  { background: #1a6fb5; color: #fff; }
+  .chip-rnf { background: #2a7a2a; color: #fff; }
+  .chip-rn  { background: #c47a00; color: #fff; }
+
+  .meta-info { background: #f0f4f8; border: 1px solid #ccd6e0; border-radius: 6px; padding: 12px 18px; margin-bottom: 28px; font-size: 10pt; color: #444; }
+  .meta-info strong { color: #1a2a4a; }
+
+  @media print {
+    .toolbar { display: none; }
+    .req-body { max-height: none !important; opacity: 1 !important; padding: 0 14px 10px 30px !important; }
+    .req-header::before { display: none; }
+    .sec-body { max-height: none !important; opacity: 1 !important; }
+    .sec-heading::before { display: none; }
+    body { padding: 20px 30px; font-size: 10pt; }
+    .doc-logo img { height: 100px; }
+    .doc-title-block h1 { font-size: 17pt; }
+    h2 { font-size: 12pt; page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+    h4 { page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    .req { page-break-inside: avoid; }
+    @page { margin: 2cm 1.8cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="toolbar-label">Seções:</span>
+  <button class="btn btn-grey" id="expandSec">Expandir</button>
+  <button class="btn btn-grey" id="collapseSec">Recolher</button>
+  <div class="toolbar-sep"></div>
+  <span class="toolbar-label">Requisitos:</span>
+  <button class="btn btn-grey" id="expandAll">Expandir</button>
+  <button class="btn btn-grey" id="collapseAll">Recolher</button>
+  <button class="btn btn-blue"  id="showRF">Só RF</button>
+  <button class="btn btn-green" id="showRNF">Só RNF</button>
+  <button class="btn btn-amber" id="showRN">Só RN</button>
+  <div class="legend">
+    <span class="chip chip-rf">RF</span> Funcional &nbsp;
+    <span class="chip chip-rnf">RNF</span> Não Funcional &nbsp;
+    <span class="chip chip-rn">RN</span> Regra de Negócio
+  </div>
+</div>
+
+<div class="doc-logo">
+  <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD//gA7Q1JFQVRPUjogZ2QtanBlZyB2MS4wICh1c2luZyBJSkcgSlBFRyB2OTApLCBxdWFsaXR5ID0gNzAK/9sAQwAKBwcIBwYKCAgICwoKCw4YEA4NDQ4dFRYRGCMfJSQiHyIhJis3LyYpNCkhIjBBMTQ5Oz4+PiUuRElDPEg3PT47/9sAQwEKCwsODQ4cEBAcOygiKDs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7/8AAEQgAyADIAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/aAAwDAQACEQMRAD8A9mooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKbJIkUbSSOqIoyWY4AFct4x8eWXhZVtIoze6pMB5VqnbPQtjp9Op/WuRXwX4z8cOLvxPqR0+1Y7ktFGSo/wBwHA+pJPrQB2Oo/EfwnprFJdXilcfw24Mv6qCP1rIf4zeF1bAiv3HqIVx+rVm3Hg74aeGPk1i/M8y9UluGL/8AfEeDVNtU+Eajaulu69N4ilx+ZOaAOqsviv4RvHCPey2pPTz4WA/MZArq7K/s9RgFxY3UNzEejxOGH5ivJxpHwn1w+XZ6k+myt0zI6DP/AG0BH61Wufhz4n8MSf2r4V1Q3iAbh5DbHYf7uSrj+fpQB7TRXnXg/wCKUWo3A0nxFGLDUAdgkYbUdvQg/db9Pp0r0WgAooooAKjnuIbWFpriZIY1GWeRgqj6k1wXjP4q2WhPJYaQqX18vDuT+6iPuR94+w/PtXnt3Y+IPEluNb8U6t9g09jmOS6z8/tFEOv4AD3oA9W1D4n+EtPYodTFy47WyFx/310/WshvjX4aVsCz1Nh6iKP/AOLrzfTdCXXLg2vhnRbi+CnD3l6+1V98KQq/QljXZad8ETIBJq+rhXPWO0iGB/wI/wDxNAHRWfxf8J3TBZZrq0z3mgOP/Hc11em6xpusQ+dpt9BdIOpicNj6jt+NcFJ8EdDKYi1PUFf1Yow/LaK53UvhT4k8PSf2hoGoG6aLkeSTFMPoM4P58+lAHtlFeYeCfik9zdLo3icCC63eWlyy7AzdNrj+E+/T6V6fQAUUUUAFFFFABRRRQAVz/jPxMvhfQmuUTzbyZvKtYsZ3yHpx6Dr+neugrgjGPE3xZYSfPZ+HYFKr1BnfkH8P5oKAH+F/DFr4XspvE3ia4STVZQZbi4mORBn+Ffftx9Bx1rJfeI/iHI39mSy6J4fBK/acYnuR32+g/wA89KgvWf4j+M30tXYeH9HfNxtOBcS9MZ9Mgj6AnuK9HiijghSGFFjjRQqoowFA6ACgDB0bwJ4c0RQbfTYppupnuB5khPrk9PwxW+EVV2hQF9AOKdRQBk6n4V0HWEZb/SbWYt/H5YVx9GGCPzrj7jwbr3g6Rr7wbfyXFsDuk0u5bcrDvtPr+R9z0r0aigDzlrXw38VLCQSQnTtbthtkBGJYiOORxvXPr09qh8OeJtU8G6nH4Y8Xn9w3y2eoE5UjsC3p7nkd+Om94s8HyX1wmu6DILPXLb5kkXhZwP4X9eOMn6Hjoywu9K+I3h+fTtWtPJvbdtl1bNxJbyDjcvcd8fiDQB2AIIyOleR/EX4jzXE7+H/DsjHLeXPcRcs7dNiY/Ikdeg98rxB4o1/wlY3fgs3qXOzasV6jfvEhI+4R2OMe4H4EO02ytPhxo8et6rCk2v3SZsbN/wDl3B/jYdj/APq9cAEMGj6X4BsYtS8Qwpe63Mu+100nKQ+jyf4f/rGh4c8Hax8QL8eIPFFxKtk3MUf3TIvYKP4U9+/60/wN4Iu/FeoHxR4nLzQyvvjjk63B9SOyDsO/06+xKoRQqgAAYAHagCCxsLTTLRLSxt47eCMYWONcAVYoooAKKKKAPP8A4neBoda02XWLCELqNsm59o/16DqD6sB0P4emD4T+Ln13R30u9kL3lgBtZjzJF0B9yOh/Cu/614VopPhX4wtbw/JbG9a2Kjpsk+4Pwyp/CgD3aiiigAooooAKKKKACvL9J1NtL8P+OteU4nOozRo3oc4T8i4r1CvGtWU23hvx7pJ4eHUo7oL6pJIpH6AUAdt8L9KTTPA9m+397eZuJD67vu/+Oha6+sXwcwbwZopXp9hhH5IBW1QAUUUUAFFFFABXmfxNurbwxqVl4g0y6Ftrbny2iC5W4ixyXHtxg/4cdt4l8RWXhjRpdRvG4XiOMH5pX7KP88DNeNaNZSeMdWvPFvimby9JtDumY8B8fdiT26dOefU5oAbomj6U/h6/8XeKrk3QuGeK3gSX95JMerE9j3Ge3JGMUzwboq694isLjxPNcfZJlK2jT5K3LJgCMMew9O+MVmTQHxBq1/rNpo0sejW8wluILY48qMkA47BiASccD6Cvc47Hw/4s8Iw21qqNpzxjyDFwYSOhH91lpAbyIsaKiKFVRgKBgAU6uP0XxBeaNqSeG/E8g+0Hiy1A8Jdr2BPZ/Ud/yz2FMAooooAKKKKACvC9d/0rxrqmoR9ItbtIVI/vgOD/AOgGvWvFniKDwxoE+oSkGUDZBGeskh+6P6n2Brza30Sayl8J6LdZbUNQ1A6peg/eXbyAf+A7vxzQB7HRRRQAUUUUAFFFFABXmHxJ086ZrH9sYxY6tatYXrdkbH7tz9CF/wC+cd69PqpqmmWmsabPp97EJIJ12uv9R7jqKAOa+FuoC+8D2sJP72yZ7eQZ6EHI/wDHSK7CvGtLbUPhL4okg1BZJ9EviF+0IuRx0bHZhk5HcdM8V69Z3ttqFrHdWc8c8EgykkbZBFAE9FFFABVTVNTs9G06a/v5lht4VyzH+Q9SfSq+u+IdM8OWLXmp3KxJ/CnV5D6KO5rxfX9evvHd39s1CcaVoFu52bucn/ZH/LSQjsOBnsOSAOu7m/8Aid4kku7mX7DotiCzyOfkt4vX0Ltj/IFLcSXXj7VLXwz4btza6JY/cBHAHeV/UnnA68+pNGn2Gp+OBHonh+0bTfD1s+Xd/wCNu7yH+Nz/AHRwOOnWvYfDfhrTvC+lrY6fHgdZJW+/K3qT/nFAEmg+H7Dw9o0el2UY8pB87MOZGPVm9Sf/AK1cPqljf/DXVZNb0aJrjQbl83lkv/LA/wB5fQf/AKjxjHpdNkjSWNo5FDowwysMgj0NAGFJHoPj/wAODlLq0m5Vhw8T/wA1Yf54Nc4NX8RfD9hb61FLrGiLxHfxDMsK+kg7/U/n2rP1rwtrXgXUpNf8HFpLJ/mudPILAD2HdfpyPpXReGPiToXiWNYJpFsbxhhredhhj/st0b6dfagDd0fxFpGvwCXTL+G4GMlVbDr9VPI/EVp1yWq/DTw1qc/2mO2k0+5znzbJ/LOfXHT9KqL4D162+Wz8d6miDosyeaR+JagDuK5/xB400bw6vl3Fx5943EdnB88rnsMDp+NZJ8Aand/LqnjTV7mM/eSEiEN9eTVhNO8GfD23N2629rKR/rZmLzSeu3OT+VAGfYaPfavqA8XeNNlpBZqZLTT2Py26jne/+1xn/DAAg8DmbxX4v1LxlOjLbIPslgrDoo6n8v1Y+lYt5q2s/FjVBpWlxSWOhQuDPKw5Yf7XbPov4n29U0vTbXR9Ng0+yjEcECbUX+p9z1NAFuiiigAooooAKKKKACiiigCvfWNpqVo9pe28dxBIMNHIuQa4G6+Gup6NO914M12awLHJtZmJjJ+vOfxB+tejUUAeVza58WNK+WfSIL0D/lokIk3fhGw/lWfdeNfifdIYotBntWPG6HTZMj/vrIr2SigDwCLwP468QX/2u+spXkbrLfygbfwJzj2xj2rtdG+EUJljuvEuoNfyIAFt4spEo9M9cewC16VRQBDa2lvZWyW1rBHBDGMJHGoVVHsBU1FFABRRRQAVxXir4X6L4id7qDOn3rcmWJcq5/2l7/UYNdrRQB4yfDXxN8K/JpV9Jd2yfdEUokUD/ck6fgKP+Es+KsfyNpN0zf3v7NJ/kMV7NRQB4x5nxc1w+Xi6tUbqdsdvj8eGrR0f4OTXFz9s8Uao1y5OWihcsW/3pG5/IfjXq1FAFbT9Os9Ks0s7C2jt4IxhY4xgD/E+9WaKKACiiigAooooAKK5rxn4pk8O2ttBY2wu9Uv5PKtID0J4yx9hkfnWTF4Z8e3EYubnxmttcnnyIrRWjX2zx/KgDu6KgsY7iKxgjvJxPcLGBLKFCh2xycDpzU9ABRXKeAtZ1DWbfV31C48422pywRHYq7UAXA4Az1PWuroAKK4rxlqOtr4q0LRtI1X+zhqAm8yTyEl5UAjhh9e461TvtV8U+C9V07+19Uh1nTb6cW7P9mWGSJj0IC9fXv0PSgD0GiiigAorzbwufGXiqwuL9PGBs1jupIRF/Z0UnC45zx612+h2Op2Fm8eq6udUnZ9wlNusO1cD5dq/ic+9AGlRRXC6/e+Ibz4hw6BpWuHTIG08XBP2VJssHYH73PTHftQB3VFcDPrHibwbrOnxa7qEOr6ZqEwg+0C3WGSFz04XjH59D0799QAUVW1CV4NNupY22vHC7KfQgHFY3gHVL3WfBen6hqE3n3M3mb5NoXOJGA4AA6AUAdFRRVDXNUj0XQ7zU5cbbaFnAP8AEccD8TgfjQBforg/hn4p1XWkvrDXZC9/b7JkLIqExOoI4UDpwf8AgQrvKACiobt2jtJnQ4ZY2IPocV518OPHmo6ncLpviKTdNeKZbK4ZFQSgEhk+UAZBU4/H2oA9LorlLfWdQf4pXWjNcZsI9NE6w7F4fcoznGehPeigDN8Rstv8W/DU91xbvBLHEW6CTDD8/mUfiK72sTxT4Xs/FWli0uXaGSNvMgnT70T+o9vUf/rrn4tM+JtpGLWPWtJuIl4W4nRvMx7gLgn8/rQB3dFNjDLGodtzAAFsYyfWnUAcP8L/APj01/8A7DM/8lruK57wh4duPDsOpR3E0UpvL+S5Ty8/KrAYBz34roaAPPfHcV9P488Lx6bcpbXbC48uWRN6qdozkd+M1n+JbHXtEv8AT/Efie7i1vT7GZcwwr5PksSMPtxhsHHU+naum8V+G9Y1TXdK1fR7q0gm04SYFyGIJYAdB7ZqhqHhDxR4m8q18R61ZrpyOHkgsYSDLjsSen+eKAO4ilSaFJY23I6hlPqD0p9NjjSKNY41CogAUDsBTqAPKfANh4oudHu5NH1q2srb7dKDHLaiQ7uMnP5V6ogZUUM25gMFsYz71wOi+F/G3h22mtNN1LRxBLO82JY5GbLe/wCArrNCi12K3l/t65s5pi/7v7KjKoXHfPfNAGpXnHiC41S2+LtvJpFjHe3P9kY8qSURjb5jZOTXo9c9J4duH+IEXiITRfZ0sPsxj537txOfTHNAHJQnVvG/jWPT9eSDTY9Ddbk2KMXeZj0bd0K9OR6++R6dXN694aubzxBpmvaVNFBe2bbJvMyFnhPVTjv1x9fYV0lAFTVf+QRe/wDXu/8A6Ca534Xf8k60r6S/+jXrpr2BrmxngUgNLGyAnoCRisvwfok/hzwtZ6Tcyxyy2+/c8edp3OzcZ+tAG3XD/EaRtTn0bwrCx3apdBpwOohTlv8AH/gNdxXNw+G7p/Hs/iO8mieJLUW9pEud0Y/iJ/8AHunrQBieIkXwz8RtE1yICO01BP7PuccAH+An/wAd/BK7+sHxl4c/4Sjw7NpySLFPuWSCRs4RwevHtkfjWvZLcpYwJeMj3KxqJWT7rNjkj2zQAX3/AB4XH/XJv5V5l4d8Mf8ACSfCfTvsz+TqVnLLNZTg4KOJGOM+hwP0PavT7iMzW0sSkAuhUZ9xWN4L0G48NeGLbSrmWOWWFnJePO07mJ7/AFoA4nwLrdxr3xMuLq8gaC8j0kwXMZGMSJIgbjt9O1FdvF4Yt7bxm/iK3xG9xaNBcIB99tyFW+uFIP4UUAbtFFFADXdY0LuwVVGSScACoTfWYtUujdQi3kxsl8wbGzwMHoc0zVgW0e9Cgkm3cADv8prgGsrv+xYdHNvL5Fg0V2h2HB3lNq/gXm47bFoA9IZlRC7sFVRkknAAoR1kRXRgysMhgcgj1rhH1PUX1j91JchXluo5I3kZiqrHIUymwKnKrtIJLD1yalsr7UI9cslknuJRJ5KmFWZGjUxDJKFSrpnJLZBB47YoA7iiuO8X39xZtqcj3t1aCHTvMsTBna8vz784HJGE4PQEn3Ekuq3iXzWSyTG5Gq8R7Gx5BTIycY257+tAHW00MrFgrAlTggHoetcf4SvNUuL+EXdw7s1qzXcTs7FJcr1BQCM/eG0E5H0yat9Jd2Wq6mkE00cc2qI1yzSugWM2y7TuCkqpcEZA/hAyKAO8orho769MEX9qX99DF9mdrWS2Rt0snmMAOVG9ggTAIAbJOPSYSaxGyXsNxdyXEmo3UIgkP7vywkpQbeg+ZU598ZxQB2EkscKb5ZFjXIGWOBknAH4kgU+uBee4uYIYre5vbyJltpLvz1YmOcXMOAMj5TjzMqOBtHAp73+sCDdYz3c2rFbn7VbOpKRYVym1SMD5ggXH3gT160AdxJLHEFMkioGYKNxxknoPrT64aK+kbVngsL6+urZGsW/0gMSC0sgf7wB5CjPoQRxjAdoGsXR1eKe4luBavZTS3CyyPIUdWQgMuwBHALfIuf5UAdlcXNvZwNPdTxwRJy0kjBVX6k0lrd219As9pcRXETdJInDKfxFZPigQvYWskrTxrHcrItxDEJPIIBwzKQcr2PHGQeMZGFBeTkkyy+VYS3x+06hZwvAJ/wB1wSOSo3AKWBwSByOaAO282PzjD5i+YF3FM849celPrgY7rUopPt0jXO1FhHnNGQ7W4vGG5hjvFyeOhzVl9VkuLx3ur26ttJa7lUTpuTpHF5a5xkKSZCPUgDvggHYNcQJKImmRZDyELDJ/Cnu6Ro0kjBEUZZmOAB6mvPrm7uJNVtrhFuTcQz2ih7kFZTG2ze3lqmMFXbLFhg5AxgVbinvLpFhe6unup47lNSgkU+XCu1tuBjC/NtAx94EnnrQB2yOkiLJGwdGGVZTkEeop1VdLjEOk2cQOQkCKD9FFWqACiiigAooooAKKKKACiiigCG6tYb20mtLlBJDOhjkQkjcpGCOPapqKKACiiigAooooAKjngiubeS3nQSRSqUdGHDKRgg1JRQBTsdLtNNMhtkcNLje8kryMwHQbmJOBk4HQZNXKKKACiiigAqtfWFtqNv8AZ7tDJEWDFQ5XJByM4Izz2qzRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH//Z" alt="Ciberian">
+</div>
+<div class="doc-title-block">
+  <h1>Especificação de Requisitos</h1>
+  <div class="doc-subtitle">Plataforma Payproxy</div>
+</div>
+
+<div class="meta-info">
+  <strong>Documento:</strong> Especificação de Requisitos — Plataforma Payproxy &nbsp;|&nbsp;
+  <strong>Versão:</strong> 1.3 &nbsp;|&nbsp;
+  <strong>Data:</strong> Junho 2026 &nbsp;|&nbsp;
+  <strong>Status:</strong> Em elaboração
+</div>
+
+<h2 class="sec-heading">Contexto</h2>
+<p>A Secretaria Municipal da Fazenda de Salvador (SEFAZ) necessita contratar solução SaaS para operacionalizar a arrecadação municipal via DDA (Débito Direto Autorizado), com emissão de boletos registrados, split de pagamento entre múltiplos favorecidos e comunicação digital com contribuintes.</p>
+<p>Este documento especifica os requisitos da plataforma intermediária que expõe uma API para geração de boletos com split, com suporte a <strong>múltiplos parceiros bancários</strong>, gestão de múltiplos tenants (aplicações consumidoras) e módulo de relatórios.</p>
+<hr>
+<h2 class="sec-heading">1. Requisitos Funcionais</h2>
+<h3 class="sec-heading">1.1 Gestão de Acesso por Aplicação Consumidora</h3>
+<h4 class="sec-heading">1.1.1 Ciclo de Vida da Aplicação</h4>
+<div class="req"><span class="req-header"><strong>RF-AC-01</strong> O sistema deve gerenciar o ciclo de vida de cada aplicação com os seguintes estados</span><div class="req-body">
+<p>explícitos: <code>PENDENTE_APROVAÇÃO → ATIVA → SUSPENSA → INATIVA</code>.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-02</strong> O cadastro de nova aplicação deve passar por <strong>aprovação explícita</strong> de um</span><div class="req-body">
+<p>administrador da plataforma antes de ter qualquer acesso liberado.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-03</strong> O administrador pode <strong>suspender temporariamente</strong> uma aplicação, bloqueando</span><div class="req-body">
+<p>todas as chamadas à API sem revogar configurações ou API keys. A reativação deve restaurar o estado anterior integralmente.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-04</strong> O administrador pode <strong>inativar definitivamente</strong> uma aplicação, encerrando todos os</span><div class="req-body">
+<p>acessos. A inativação é irreversível sem novo ciclo de aprovação.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-05</strong> Toda mudança de estado deve registrar: administrador responsável, motivo (campo</span><div class="req-body">
+<p>texto obrigatório) e timestamp.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-06</strong> Aplicação suspensa ou inativa deve receber resposta <code>403 Forbidden</code> com mensagem</span><div class="req-body">
+<p>informativa em todas as chamadas à API, sem expor detalhes internos da restrição.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-07</strong> O sistema deve manter histórico completo e imutável de mudanças de estado por</span><div class="req-body">
+<p>aplicação, consultável pelo backoffice.</p>
+</div></div>
+
+<hr>
+<h4 class="sec-heading">1.1.2 Portal do Tenant — Múltiplos Usuários por Aplicação</h4>
+<div class="req"><span class="req-header"><strong>RF-AC-08</strong> A plataforma deve disponibilizar um <strong>portal web por tenant</strong>, separado do backoffice</span><div class="req-body">
+<p>administrativo interno, onde os usuários da aplicação gerenciam boletos, configurações e relatórios.</p>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-AC-09</strong> Cada tenant pode ter <strong>múltiplos usuários humanos</strong> com papéis distintos:</span></div>
+
+<table>
+<thead><tr><th>Papel</th><th>Capacidades</th></tr></thead>
+<tbody>
+<tr><td><strong>ADMIN</strong></td><td>Gerenciar usuários do tenant, configurar boleto e splits, visualizar relatórios e auditoria</td></tr>
+<tr><td><strong>OPERADOR</strong></td><td>Emitir e cancelar boletos, consultar status, visualizar relatórios</td></tr>
+<tr><td><strong>VISUALIZADOR</strong></td><td>Consulta de boletos e relatórios apenas (sem escrita)</td></tr>
+</tbody>
+</table>
+<div class="req"><span class="req-header"><strong>RF-AC-10</strong> O tenant ADMIN pode convidar, ativar e desativar usuários dentro do seu próprio</span><div class="req-body">
+<p>tenant. O convite é enviado por e-mail e expira em 48 horas.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-11</strong> Cada usuário de tenant autentica com <strong>e-mail + senha + 2FA</strong> (TOTP) para acessar</span><div class="req-body">
+<p>o portal.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-12</strong> Um usuário de tenant visualiza e gerencia <strong>somente os dados do seu próprio tenant</strong></span><div class="req-body">
+<p>(isolamento estrito entre tenants).</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-13</strong> Um tenant ADMIN <strong>não pode conceder permissões além</strong> do que o próprio tenant está</span><div class="req-body">
+<p>autorizado pela plataforma (sem escalada de privilégios).</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-14</strong> O sistema deve registrar na trilha de auditoria todas as ações de gestão de usuários</span><div class="req-body">
+<p>(convite, ativação, desativação, alteração de papel).</p>
+</div></div>
+
+<hr>
+<h4 class="sec-heading">1.1.3 Permissões Granulares por API Key</h4>
+<div class="req"><span class="req-header"><strong>RF-AC-15</strong> Cada API key deve poder ter um <strong>perfil de permissões granulares</strong> além dos escopos</span><div class="req-body">
+<p>básicos, configurável pelo administrador da plataforma:</p>
+</div></div>
+
+<ul style="margin-top:8px;">
+<li>Valor máximo por boleto (ex.: limitar a R$ 50.000,00 por emissão)</li>
+<li>Limite diário de boletos emitidos</li>
+<li>Limite mensal de boletos emitidos</li>
+<li>Restrição por tipo de tributo (via campo <code>metadata</code>, ex.: somente <code>IPTU</code> e <code>ISS</code>)</li>
+<li>Permissão ou restrição de emissão em lote (batch)</li>
+</ul>
+<div class="req"><span class="req-header"><strong>RF-AC-16</strong> O mesmo tenant pode ter <strong>múltiplas API keys com perfis distintos</strong> (ex.: chave de</span><div class="req-body">
+<p>produção com acesso total, chave de integração com valor máximo reduzido e sem batch).</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-17</strong> As permissões granulares podem ser <strong>modificadas sem revogar a API key</strong>, evitando</span><div class="req-body">
+<p>interrupção operacional.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-18</strong> Tentativas de operação que excedam as permissões configuradas devem retornar</span><div class="req-body">
+<p><code>403 Forbidden</code> com mensagem que descreve o tipo de restrição violada, sem revelar os limites exatos configurados internamente.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-AC-19</strong> O sistema deve alertar o administrador da plataforma quando uma aplicação atingir</span><div class="req-body">
+<p>80% do seu limite mensal de emissões.</p>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.2 Gestão de Tenants (Aplicações Consumidoras)</h3>
+<div class="req"><span class="req-header"><strong>RF-01</strong> O sistema deve permitir o cadastro de tenants, representando cada aplicação ou sistema</span><div class="req-body">
+<p>externo que irá consumir a API de boletos.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-02</strong> Cada tenant deve possuir: nome, documento (CNPJ), status (ativo / suspenso / inativo) e</span><div class="req-body">
+<p>data de cadastro.</p>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-03</strong> O sistema deve permitir a criação, listagem e revogação de API keys por tenant.</span></div>
+
+<div class="req"><span class="req-header"><strong>RF-04</strong> Cada API key deve possuir escopos de permissão granulares:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li><code>boleto:write</code> — emitir e cancelar boletos</li>
+<li><code>boleto:read</code> — consultar boletos</li>
+<li><code>report:read</code> — acessar relatórios</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-05</strong> A API key completa deve ser exibida <strong>uma única vez</strong> no momento da criação; após isso,</span><div class="req-body">
+<p>somente o prefixo (primeiros caracteres) é visível para identificação.</p>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-06</strong> O sistema deve suportar data de expiração opcional por API key.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-07</strong> Deve haver controle de rate limiting por API key, configurável por tenant.</span></div>
+
+<hr>
+<h3 class="sec-heading">1.3 Gestão de Parceiros Bancários</h3>
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-01</strong> A plataforma deve suportar o cadastro e operação de <strong>múltiplos parceiros bancários</strong> (fintechs, bancos ou correspondentes bancários autorizados), sem limitação a um único provedor.</span></div>
+
+<div class="req"><span class="req-header"><strong>RF-PART-02</strong> Cada parceiro bancário cadastrado deve conter:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Nome e identificador único na plataforma</li>
+<li>Tipo: <code>FINTECH</code>, <code>BANCO</code> ou <code>CORRESPONDENTE_BANCÁRIO</code></li>
+<li>Credenciais de integração com a API do parceiro (armazenadas com AES-256-GCM)</li>
+<li>Funcionalidades suportadas: split de pagamento, registro DDA, QR Code Pix, CNAB 240, CNAB 400</li>
+<li>Status: <code>ATIVO</code> / <code>INATIVO</code></li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-03</strong> O administrador da plataforma pode ativar ou desativar um parceiro bancário sem necessidade de redeploy e sem impactar tenants que utilizam outros parceiros.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-04</strong> Cada tenant deve configurar qual parceiro bancário será utilizado para emissão de boletos. Um tenant pode ter configurações para múltiplos parceiros, com um <strong>parceiro padrão</strong> definido.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-05</strong> No momento da emissão de um boleto via API, o tenant pode informar opcionalmente o parceiro bancário a ser utilizado; caso não informado, o parceiro padrão do tenant é aplicado.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-06</strong> A plataforma deve validar, antes da emissão, se o parceiro bancário selecionado suporta as funcionalidades requeridas (split, DDA, Pix), retornando erro claro caso não suporte.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-07</strong> A integração com cada parceiro bancário deve ser encapsulada em um adaptador específico daquele parceiro, de forma que novos parceiros possam ser incorporados sem alteração na API exposta aos tenants.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-PART-08</strong> O resultado da emissão (código de barras, linha digitável, QR Code Pix, confirmação DDA) deve ser normalizado pela plataforma em formato padrão, independentemente do parceiro bancário utilizado.</span></div>
+
+<hr>
+<h3 class="sec-heading">1.4 Configuração de Boleto por Tenant</h3>
+<div class="req"><span class="req-header"><strong>RF-08</strong> Cada tenant deve ter uma configuração de boleto contendo:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Referência ao parceiro bancário ativo para o tenant (conforme RF-PART-04)</li>
+<li>Prazo padrão de vencimento (em dias)</li>
+<li>Percentual de multa após vencimento</li>
+<li>Percentual de juros ao mês</li>
+<li>Percentual ou valor de desconto para pagamento antecipado (opcional)</li>
+<li>Dias de antecedência para aplicação do desconto (opcional)</li>
+<li>Linhas de instrução exibidas no boleto (até 2 linhas)</li>
+<li>URL de webhook para notificação de pagamento ao tenant</li>
+<li>Segredo HMAC para assinatura dos webhooks enviados ao tenant</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-09</strong> Um tenant pode ter configurações para múltiplos parceiros bancários (ex.: parceiro A para produção, parceiro B para sandbox), com indicação de qual está ativo como padrão.</span></div>
+
+<hr>
+<h3 class="sec-heading">1.5 Configuração de Split de Pagamento</h3>
+<div class="req"><span class="req-header"><strong>RF-10</strong> Cada tenant deve poder cadastrar múltiplos favorecidos (beneficiários) de split,</span><div class="req-body">
+<p>associados à sua configuração de boleto.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-11</strong> Cada favorecido do split deve conter:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Nome/rótulo identificador</li>
+<li>Identificador de credencial do favorecido no parceiro bancário</li>
+<li>Tipo de split: <strong>percentual</strong> (ex.: 85%) ou <strong>valor fixo</strong> (ex.: R$ 10,00)</li>
+<li>Ordem de prioridade de aplicação</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-12</strong> O sistema deve validar que:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>A soma dos splits percentuais não ultrapassa 100%</li>
+<li>A soma dos splits de valor fixo não ultrapassa o valor total do boleto</li>
+<li>A configuração combinada (percentual + fixo) resulta em valor positivo para todos os favorecidos</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-13</strong> O conjunto de splits configurado é aplicado automaticamente a todos os boletos gerados</span><div class="req-body">
+<p>pelo tenant, salvo configuração específica por boleto.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-14</strong> O snapshot exato dos splits aplicados deve ser registrado junto ao boleto no momento da</span><div class="req-body">
+<p>emissão, garantindo rastreabilidade histórica mesmo que a configuração seja alterada posteriormente.</p>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.6 Geração de Boletos</h3>
+<div class="req"><span class="req-header"><strong>RF-15</strong> O sistema deve expor endpoint para geração individual de boleto, recebendo:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Referência externa do tenant (identificador no sistema do cliente)</li>
+<li>Dados do pagador: nome, CPF/CNPJ, e-mail, telefone, endereço completo</li>
+<li>Valor do boleto</li>
+<li>Data de vencimento</li>
+<li>Metadados livres (campo JSON para dados adicionais do tenant, ex.: tipo de tributo, exercício fiscal, inscrição imobiliária)</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-16</strong> O sistema deve expor endpoint para geração em lote (batch), suportando até 500 boletos</span><div class="req-body">
+<p>por requisição, processados de forma assíncrona.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-17</strong> O tenant deve poder consultar o andamento de um processamento em lote, incluindo</span><div class="req-body">
+<p>contagem de sucessos e falhas individuais.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-18</strong> O boleto gerado deve conter:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Código de barras padrão CNAB FEBRABAN</li>
+<li>Linha digitável</li>
+<li>QR Code Pix dinâmico</li>
+<li>URL do boleto em PDF</li>
+<li>Confirmação de registro DDA (quando aplicável)</li>
+<li>Splits aplicados com valor calculado por favorecido</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-19</strong> O sistema deve garantir idempotência: boleto com mesma referência externa e mesmo</span><div class="req-body">
+<p>tenant retorna o boleto existente (se ainda válido) sem criar duplicata.</p>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-20</strong> O sistema deve suportar cancelamento de boleto, desde que ainda não liquidado.</span></div>
+
+<hr>
+<h3 class="sec-heading">1.7 DDA (Débito Direto Autorizado)</h3>
+<div class="req"><span class="req-header"><strong>RF-21</strong> O registro DDA deve ser realizado automaticamente no momento da emissão do boleto,</span><div class="req-body">
+<p>por meio da integração com o parceiro bancário ativo, para os pagadores cujo CPF/CNPJ esteja cadastrado no sistema DDA da FEBRABAN.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-22</strong> O sistema deve registrar e expor a informação de se o boleto está ou não registrado no</span><div class="req-body">
+<p>DDA.</p>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.8 Comunicação com o Contribuinte</h3>
+<div class="req"><span class="req-header req-header--simple"><strong>RF-MSG-01</strong> Cada tenant deve configurar o <strong>modelo de comunicação</strong> aplicável, mapeado aos modelos de contratação do Termo de Referência:</span></div>
+
+<table>
+<thead><tr><th>Modelo</th><th>Canais</th><th>Equivalente TR</th></tr></thead>
+<tbody>
+<tr><td><strong>Modelo 1</strong></td><td>E-mail</td><td>Bolepix + DDA + E-mail (Tabela 01 — R$ 1,51/guia liquidada)</td></tr>
+<tr><td><strong>Modelo 2</strong></td><td>E-mail + WhatsApp</td><td>Bolepix + DDA + E-mail + WhatsApp (Tabela 02 — R$ 2,10/guia liquidada)</td></tr>
+</tbody>
+</table>
+<div class="req"><span class="req-header"><strong>RF-MSG-02</strong> Ao emitir um boleto, o sistema deve enviar automaticamente ao pagador:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li><strong>E-mail</strong> com PDF do boleto, linha digitável, QR Code Pix e instruções de pagamento (ambos os modelos)</li>
+<li><strong>Mensagem WhatsApp</strong> com link do boleto e QR Code Pix (somente Modelo 2)</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-MSG-03</strong> O endereço de e-mail e o número de telefone utilizados no envio são provenientes dos dados do pagador informados no momento da emissão (RF-15). Campos ausentes não impedem a emissão — apenas o canal correspondente é suprimido, com registro em log.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-MSG-04</strong> O tenant deve poder configurar template de e-mail com logotipo, nome da entidade e texto personalizado. Templates de WhatsApp devem seguir o padrão HSM (Highly Structured Messages) aprovado pela Meta.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-MSG-05</strong> O sistema deve registrar o status de entrega de cada comunicação vinculada ao boleto: <code>ENVIADO</code>, <code>ENTREGUE</code>, <code>FALHA</code>. Falha de entrega não impede nem reverte a emissão do boleto.</span></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-MSG-06</strong> O tenant ADMIN ou OPERADOR pode reenviar manualmente a comunicação para um boleto específico, desde que o boleto esteja com status <code>PENDENTE</code>.</span></div>
+
+<hr>
+<h3 class="sec-heading">1.9 Conciliação e Notificações de Pagamento</h3>
+<div class="req"><span class="req-header"><strong>RF-23</strong> O sistema deve receber notificações (webhooks) do parceiro bancário informando a liquidação de</span><div class="req-body">
+<p>boletos.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-24</strong> Ao receber notificação de pagamento, o sistema deve:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Atualizar o status do boleto para "Pago"</li>
+<li>Registrar data/hora, valor pago e canal de pagamento</li>
+<li>Invalidar imediatamente quaisquer outras formas de pagamento vinculadas ao mesmo documento (prevenção de duplicidade)</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-25</strong> O sistema deve retransmitir a notificação de pagamento para a URL de webhook</span><div class="req-body">
+<p>cadastrada pelo tenant, assinada com HMAC-SHA256 usando o segredo configurado.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-26</strong> A conciliação deve ser idempotente: notificações duplicadas para boleto já liquidado</span><div class="req-body">
+<p>devem ser ignoradas sem gerar inconsistência.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-27</strong> Falhas na entrega do webhook ao tenant devem gerar retentativas automáticas com</span><div class="req-body">
+<p>backoff exponencial (mínimo 3 tentativas).</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-28</strong> Um job periódico diário deve identificar boletos com vencimento ultrapassado e status</span><div class="req-body">
+<p>pendente, atualizá-los para "Expirado" após confirmar o status no parceiro bancário.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-29</strong> O sistema deve executar um <strong>job noturno de conciliação ativa</strong> que identifica boletos</span><div class="req-body">
+<p>com status Pendente que não receberam notificação de pagamento via webhook e consulta proativamente o parceiro bancário ativo de cada boleto para verificar a situação real. O job deve:</p>
+</div></div>
+
+<ul style="margin-top:8px;">
+<li>Selecionar boletos com status <code>PENDENTE</code> cujo vencimento esteja dentro de uma janela configurável (ex.: últimos 30 dias) e que não possuam registro de webhook de pagamento recebido do parceiro bancário</li>
+<li>Para cada boleto selecionado, consultar a API do parceiro bancário para obter o status atual</li>
+<li>Caso o boleto esteja <strong>pago</strong> no parceiro bancário: - Atualizar o status para <code>PAGO</code> na base de dados, registrando data/hora, valor e canal de pagamento retornados pelo parceiro bancário - Gerar registro de auditoria indicando que a atualização foi realizada pelo job de conciliação (ator: <code>SYSTEM/reconciliation-job</code>), e não por webhook recebido - Acionar a notificação webhook do tenant (conforme RF-25), informando o pagamento com os mesmos dados que seriam enviados em caso de notificação normal</li>
+<li>Caso o boleto esteja cancelado ou expirado no parceiro bancário, atualizar o status correspondente sem acionar webhook de pagamento</li>
+<li>Processar os boletos em lotes configuráveis para não sobrecarregar a API do parceiro bancário nem gerar picos de requisições</li>
+<li>Ser <strong>idempotente</strong>: execuções repetidas não devem gerar duplicidade de notificações nem inconsistências na base de dados</li>
+<li>Registrar ao final de cada execução: total de boletos consultados, total atualizados como pagos, total com outros status, total de erros de consulta</li>
+<li>Falhas individuais de consulta ao parceiro bancário devem ser registradas em log e não devem interromper o processamento dos demais boletos da mesma execução</li>
+<li>O horário e a janela de busca devem ser configuráveis sem necessidade de redeploy</li>
+</ul>
+<hr>
+<h3 class="sec-heading">1.10 Relatórios</h3>
+<div class="req"><span class="req-header"><strong>RF-44</strong> O sistema deve fornecer relatório de sumário com os seguintes indicadores, filtráveis por</span><div class="req-body">
+<p>período:</p>
+<ul style="margin-top:8px;">
+<li>Total de boletos emitidos</li>
+<li>Total de boletos liquidados</li>
+<li>Total de boletos cancelados</li>
+<li>Total de boletos expirados</li>
+<li>Volume financeiro emitido</li>
+<li>Volume financeiro liquidado</li>
+<li>Taxa de liquidação (%)</li>
+<li>Ticket médio</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-45</strong> O sistema deve fornecer relatório de evolução temporal (diária, semanal ou mensal)</span><div class="req-body">
+<p>cruzando emissão e liquidação.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-46</strong> O sistema deve fornecer relatório de liquidações por canal de pagamento:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>PIX</li>
+<li>Internet Banking / Autoatendimento</li>
+<li>DDA</li>
+<li>Correspondente Bancário</li>
+<li>Guichê de Caixa</li>
+<li>Débito Automático em Conta</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-47</strong> O sistema deve fornecer relatório de liquidações segmentado por campos presentes nos</span><div class="req-body">
+<p>metadados do boleto (ex.: tipo de tributo, exercício, região administrativa, bairro, zona fiscal).</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-48</strong> O sistema deve fornecer relatório de inadimplência, identificando boletos vencidos há</span><div class="req-body">
+<p>mais de 30, 60 e 90 dias.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-49</strong> O sistema deve permitir exportação dos dados de boletos em formato CSV e JSON,</span><div class="req-body">
+<p>suportando filtros por período, status, canal e campos de metadados.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-50</strong> Para exportações de grande volume, o processamento deve ser assíncrono, com</span><div class="req-body">
+<p>disponibilização de URL de download após conclusão.</p>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.11 Painel Administrativo (Backoffice)</h3>
+<div class="req"><span class="req-header"><strong>RF-36</strong> O sistema deve possuir painel web administrativo para gestão da plataforma, com acesso</span><div class="req-body">
+<p>restrito a operadores internos.</p>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-37</strong> O painel deve oferecer:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Gestão de tenants (criação, edição, suspensão)</li>
+<li>Gestão de API keys por tenant</li>
+<li>Configuração de boleto e splits por tenant</li>
+<li>Configuração de credenciais do parceiro bancário por tenant</li>
+<li>Visualização de boletos com filtros avançados</li>
+<li>Dashboards com os relatórios RF-44 ao RF-48</li>
+<li>Visualização da trilha de auditoria</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header"><strong>RF-38</strong> O dashboard deve exibir visualmente, com atualização em tempo real:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li>Gráfico de linha de emissão vs. liquidação por período</li>
+<li>Gráfico de distribuição por canal de pagamento</li>
+<li>Gráfico de distribuição por tipo de tributo (via metadados)</li>
+<li>Indicadores de SLA de disponibilidade</li>
+</ul>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.12 Trilha de Auditoria</h3>
+<div class="req"><span class="req-header"><strong>RF-39</strong> Toda operação de escrita (criação, alteração, cancelamento de boletos; criação e</span><div class="req-body">
+<p>revogação de API keys; alteração de configurações) deve gerar registro imutável de auditoria contendo: ator, ação, recurso afetado, timestamp, IP de origem e dados relevantes da operação.</p>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-40</strong> A trilha de auditoria deve ter retenção mínima de 5 anos.</span></div>
+
+<div class="req"><span class="req-header"><strong>RF-41</strong> Operadores do backoffice devem poder consultar a trilha de auditoria com filtros por</span><div class="req-body">
+<p>tenant, tipo de operação, ator e período.</p>
+</div></div>
+
+<hr>
+<h3 class="sec-heading">1.13 Higienização de Dados Cadastrais</h3>
+<div class="req"><span class="req-header"><strong>RF-42</strong> O sistema deve validar os dados cadastrais do pagador no momento da emissão do boleto:</span><div class="req-body">
+<ul style="margin-top:8px;">
+<li><strong>CPF</strong>: verificação de formato e dígitos verificadores (algoritmo Receita Federal)</li>
+<li><strong>CNPJ</strong>: verificação de formato e dígitos verificadores</li>
+<li><strong>CEP</strong>: validação de existência e preenchimento automático de logradouro, bairro, cidade e UF</li>
+</ul>
+</div></div>
+
+<div class="req"><span class="req-header req-header--simple"><strong>RF-43</strong> O sistema deve padronizar os dados de endereço do pagador conforme normas dos Correios (abreviatura de logradouro, formatação de CEP, capitalização), registrando o valor original e o valor padronizado junto ao boleto.</span></div>
+
+<hr>
+<h2 class="sec-heading">2. Requisitos Não Funcionais</h2>
+<h3 class="sec-heading">2.1 Disponibilidade e Performance</h3>
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-01</strong> A plataforma deve garantir disponibilidade mínima de <strong>99,5%</strong> mensal (SLA).</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-02</strong> A geração de boleto individual deve responder em até <strong>3 segundos</strong> em condições</span><div class="req-body">
+<p>normais de operação.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-03</strong> A plataforma deve suportar o volume estimado de <strong>341.289 boletos/mês</strong> (≈ 11.376</span><div class="req-body">
+<p>boletos/dia) com capacidade de pico superior.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-04</strong> O processamento em batch deve suportar 500 boletos por requisição de forma</span><div class="req-body">
+<p>assíncrona.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-05</strong> Os relatórios de grandes períodos devem ser processados de forma assíncrona para não</span><div class="req-body">
+<p>impactar a disponibilidade da API.</p>
+</div></div>
+
+<h3 class="sec-heading">2.2 Segurança</h3>
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-06</strong> Todas as credenciais de integração com parceiros bancários devem ser armazenadas criptografadas com AES-256-GCM; nunca em texto simples.</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-07</strong> API keys devem ser armazenadas apenas como hash SHA-256; o valor completo não</span><div class="req-body">
+<p>deve ser recuperável.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-08</strong> Toda comunicação deve ser feita sobre HTTPS/TLS 1.3 ou superior.</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-09</strong> Webhooks recebidos dos parceiros bancários devem ter a assinatura HMAC-SHA256 validada antes</span><div class="req-body">
+<p>de qualquer processamento.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-10</strong> Webhooks enviados ao tenant devem ser assinados com HMAC-SHA256 usando o</span><div class="req-body">
+<p>segredo configurado pelo tenant.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-11</strong> O acesso ao backoffice deve exigir autenticação multifator (2FA).</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-12</strong> O backoffice deve implementar controle de acesso baseado em papéis (RBAC).</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-13</strong> O sistema deve aplicar rate limiting por API key para prevenir abuso.</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-14</strong> Todos os dados pessoais dos pagadores (CPF/CNPJ, e-mail, telefone, endereço) devem</span><div class="req-body">
+<p>ser tratados em conformidade com a LGPD (Lei nº 13.709/2018), com acesso controlado e registrado.</p>
+</div></div>
+
+<h3 class="sec-heading">2.3 Conformidade e Interoperabilidade</h3>
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-15</strong> Os boletos devem seguir o padrão CNAB FEBRABAN, com suporte explícito aos layouts <strong>CNAB 240</strong> e <strong>CNAB 400</strong> para liquidação e conciliação bancária.</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-16</strong> A API deve seguir o padrão REST com autenticação via API Key.</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-17</strong> Os formatos de troca de dados suportados devem incluir JSON.</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-18</strong> Todos os dados do município/tenant devem ser armazenados exclusivamente em</span><div class="req-body">
+<p>servidores localizados em território nacional, em conformidade com a LGPD.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-19</strong> A infraestrutura de hospedagem deve atender a padrões reconhecidos de segurança</span><div class="req-body">
+<p>(ISO 27001, ISO 22301, Tier III ou equivalentes).</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-20</strong> Os dados devem ser exportáveis em formatos abertos (CSV, JSON) para garantir portabilidade e independência tecnológica. Ao encerramento do contrato, todos os dados do município devem ser disponibilizados para exportação completa sem ônus adicionais e eliminados dos sistemas da plataforma após confirmação de recebimento pelo contratante.</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-25</strong> Todos os endpoints da API REST devem ser documentados sob o padrão <strong>OpenAPI/Swagger</strong>, com a especificação mantida atualizada e disponível publicamente para as aplicações consumidoras.</span></div>
+
+<h3 class="sec-heading">2.4 Manutenibilidade e Operação</h3>
+<div class="req req-rnf"><span class="req-header"><strong>RNF-21</strong> A plataforma deve ser disponibilizada como SaaS (Software as a Service), sem</span><div class="req-body">
+<p>necessidade de instalação local pelos clientes.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-22</strong> O sistema deve ter mecanismo de backup automatizado e redundância operacional.</span></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-23</strong> O sistema deve expor endpoint de health check para monitoramento de disponibilidade.</span></div>
+
+<div class="req req-rnf"><span class="req-header"><strong>RNF-24</strong> Logs de erros e eventos de sistema devem ser centralizados e consultáveis pela equipe</span><div class="req-body">
+<p>de operação.</p>
+</div></div>
+
+<div class="req req-rnf"><span class="req-header req-header--simple"><strong>RNF-26</strong> O suporte técnico à plataforma deve atender aos seguintes níveis de severidade (TR 4.1.27):</span></div>
+
+<table>
+<thead><tr><th>Severidade</th><th>Critérios de enquadramento</th><th>Tempo de resposta</th><th>Tempo de resolução</th><th>Cobertura</th></tr></thead>
+<tbody>
+<tr><td><strong>Alta</strong></td><td>Plataforma totalmente indisponível, falha na comunicação DDA, falha no processo de liquidação</td><td>≤ 1 hora</td><td>≤ 4 horas</td><td>24×7</td></tr>
+<tr><td><strong>Média</strong></td><td>Relatórios indisponíveis, instabilidade intermitente, degradação de performance</td><td>≤ 4 horas</td><td>≤ 12 horas</td><td>Horário comercial (8h–18h)</td></tr>
+<tr><td><strong>Baixa</strong></td><td>Dúvidas operacionais, ajustes de interface, extração de dados</td><td>≤ 12 horas</td><td>≤ 24 horas</td><td>Horário comercial (8h–18h)</td></tr>
+</tbody>
+</table>
+<hr>
+<h2 class="sec-heading">3. Regras de Negócio</h2>
+<div class="req req-rn"><span class="req-header"><strong>RN-01 Idempotência na emissão</strong>: Boleto com mesma <code>referência</code> e mesmo <code>tenant</code> já</span><div class="req-body">
+<p>existente e válido (status ≠ cancelado e ≠ expirado) não deve gerar novo boleto — o existente deve ser retornado.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-02 Validação de split no momento da emissão</strong>: Mesmo que a configuração de split tenha</span><div class="req-body">
+<p>sido validada no cadastro, o sistema deve revalidá-la no momento da geração de cada boleto, garantindo que os valores calculados sejam consistentes com o valor do boleto.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-03 Cancelamento restrito</strong>: Boleto só pode ser cancelado quando estiver com status</span><div class="req-body">
+<p>"Pendente". Boletos pagos ou expirados não podem ser cancelados.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-04 Imutabilidade da trilha de auditoria</strong>: Registros de auditoria não podem ser alterados</span><div class="req-body">
+<p>ou excluídos por nenhum ator, incluindo operadores administrativos.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-05 Remuneração por liquidação</strong>: A cobrança do serviço ao tenant deve ser baseada</span><div class="req-body">
+<p>exclusivamente em boletos efetivamente liquidados, não em boletos emitidos.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-06 Snapshot de configuração</strong>: Os parâmetros de boleto (multa, juros, desconto,</span><div class="req-body">
+<p>instruções) e os splits efetivamente aplicados devem ser gravados junto ao boleto no momento da emissão, de forma que alterações futuras na configuração não alterem boletos já emitidos.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-07 DDA e múltiplos meios de pagamento</strong>: Um mesmo boleto pode ser liquidado por</span><div class="req-body">
+<p>qualquer canal disponível (código de barras, Pix, DDA). A liquidação por qualquer canal deve invalidar imediatamente os demais.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header"><strong>RN-08 Integridade dos splits</strong>: A soma dos valores calculados dos splits nunca deve ultrapassar</span><div class="req-body">
+<p>o valor total do boleto. O valor residual (não distribuído via splits) permanece na conta principal do tenant.</p>
+</div></div>
+
+<div class="req req-rn"><span class="req-header req-header--simple"><strong>RN-09 Prazo de repasse D+1</strong>: Os valores arrecadados via liquidação de boletos devem ser repassados às contas dos beneficiários (tenant e favorecidos do split) até o próximo dia útil após a data de liquidação (D+1), em conformidade com TR 5.10.</span></div>
+
+<hr>
+<h2 class="sec-heading">4. Integrações Externas</h2>
+<table>
+<thead><tr><th>Sistema</th><th>Finalidade</th><th>Sentido</th></tr></thead>
+<tbody>
+<tr><td>Parceiro Bancário (ex.: PJBank, outros)</td><td>Emissão, registro, consulta e cancelamento de boletos; registro DDA; webhook de pagamento</td><td>Bidirecional</td></tr>
+<tr><td>Sistema do Tenant (ERP/Tributário)</td><td>Consumo da API de boletos; recebimento de webhooks de pagamento</td><td>Bidirecional</td></tr>
+<tr><td>FEBRABAN / Rede Bancária</td><td>Liquidação efetiva dos boletos pelos canais de pagamento</td><td>Indireto (via parceiro bancário)</td></tr>
+</tbody>
+</table>
+
+<script>
+(function() {
+  document.querySelectorAll('.req-header:not(.req-header--simple)').forEach(function(hdr) {
+    hdr.addEventListener('click', function() {
+      hdr.closest('.req').classList.toggle('collapsed');
+    });
+  });
+
+  function makeSecCollapsible(selector, stopSelector) {
+    document.querySelectorAll(selector).forEach(function(heading) {
+      var siblings = [];
+      var next = heading.nextElementSibling;
+      while (next && !next.matches(stopSelector)) {
+        siblings.push(next);
+        next = next.nextElementSibling;
+      }
+      if (!siblings.length) return;
+      var wrapper = document.createElement('div');
+      wrapper.className = 'sec-body';
+      heading.parentNode.insertBefore(wrapper, siblings[0]);
+      siblings.forEach(function(s) { wrapper.appendChild(s); });
+      heading.addEventListener('click', function() {
+        heading.classList.toggle('sec-collapsed');
+        wrapper.classList.toggle('sec-collapsed');
+      });
+    });
+  }
+
+  makeSecCollapsible('h4.sec-heading', 'h4, h3, h2, h1');
+  makeSecCollapsible('h3.sec-heading', 'h3, h2, h1');
+  makeSecCollapsible('h2.sec-heading', 'h2, h1');
+
+  function allReqs() { return document.querySelectorAll('.req'); }
+  document.getElementById('expandAll').addEventListener('click', function() { allReqs().forEach(function(d) { d.classList.remove('collapsed'); }); });
+  document.getElementById('collapseAll').addEventListener('click', function() { allReqs().forEach(function(d) { d.classList.add('collapsed'); }); });
+  document.getElementById('showRF').addEventListener('click', function() {
+    allReqs().forEach(function(d) {
+      var isRF = !d.classList.contains('req-rnf') && !d.classList.contains('req-rn');
+      if (isRF) d.classList.remove('collapsed'); else d.classList.add('collapsed');
+    });
+  });
+  document.getElementById('showRNF').addEventListener('click', function() {
+    allReqs().forEach(function(d) {
+      if (d.classList.contains('req-rnf')) d.classList.remove('collapsed'); else d.classList.add('collapsed');
+    });
+  });
+  document.getElementById('showRN').addEventListener('click', function() {
+    allReqs().forEach(function(d) {
+      if (d.classList.contains('req-rn')) d.classList.remove('collapsed'); else d.classList.add('collapsed');
+    });
+  });
+
+  function allSecBodies()   { return document.querySelectorAll('.sec-body'); }
+  function allSecHeadings() { return document.querySelectorAll('.sec-heading'); }
+  document.getElementById('expandSec').addEventListener('click', function() {
+    allSecBodies().forEach(function(b) { b.classList.remove('sec-collapsed'); });
+    allSecHeadings().forEach(function(h) { h.classList.remove('sec-collapsed'); });
+  });
+  document.getElementById('collapseSec').addEventListener('click', function() {
+    allSecBodies().forEach(function(b) { b.classList.add('sec-collapsed'); });
+    allSecHeadings().forEach(function(h) { h.classList.add('sec-collapsed'); });
+  });
+})();
+</script>
+
+</body>
+</html>
