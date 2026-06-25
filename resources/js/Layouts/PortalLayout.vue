@@ -52,10 +52,25 @@ const roleLabels = {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ]">
             <!-- Logo / Tenant -->
-            <div class="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-                <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/20 text-white font-bold text-sm">
-                    {{ tenant.name?.[0]?.toUpperCase() ?? 'P' }}
-                </div>
+            <div class="flex items-center gap-3 px-5 py-4 border-b border-white/10">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
+                    <polygon points="50,18 77.7,34 77.7,66 50,82 22.3,66 22.3,34" fill="#ffffff" fill-opacity="0.12"/>
+                    <line x1="50" y1="50" x2="50"   y2="18"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="34"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="66"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="50"   y2="82"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="66"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="34"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="50"   cy="18" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="77.7" cy="34" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="77.7" cy="66" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="50"   cy="82" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="22.3" cy="66" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="22.3" cy="34" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="50" cy="50" r="10" fill="#1ec86e"/>
+                    <polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5"
+                             fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="4" stroke-linejoin="round"/>
+                </svg>
                 <div class="min-w-0">
                     <p class="text-white font-semibold text-sm truncate">{{ tenant.name ?? 'Portal' }}</p>
                     <p class="text-white/50 text-xs">Payproxy</p>

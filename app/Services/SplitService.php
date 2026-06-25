@@ -28,7 +28,7 @@ class SplitService
         return $splits->map(function ($split) use ($amountCents) {
             $amount = $split->type === SplitType::Percentage
                 ? (int) round($amountCents * ($split->value / 100))
-                : (int) $split->value;
+                : (int) round($split->value * 100); // valor em R$ → centavos
 
             return [
                 'name'                   => $split->name,
@@ -56,14 +56,14 @@ class SplitService
 
         $totalFixed = $splits
             ->where('type', SplitType::FixedAmount)
-            ->sum(fn ($s) => (int) $s->value);
+            ->sum(fn ($s) => (int) round($s->value * 100)); // valor em R$ → centavos
 
         if ($totalFixed > $amountCents) {
             throw new InvalidSplitException('A soma dos splits de valor fixo ultrapassa o valor do boleto.');
         }
 
         // Verifica que o valor residual (principal) é positivo
-        $totalAllocated = (int) round($amountCents * ($totalPercentage / 100)) + $totalFixed;
+        $totalAllocated = (int) round($amountCents * ($totalPercentage / 100)) + $totalFixed; // $totalFixed já em centavos
         if ($totalAllocated > $amountCents) {
             throw new InvalidSplitException('A configuração de splits resulta em valor negativo para o favorecido principal.');
         }

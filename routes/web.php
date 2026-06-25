@@ -71,6 +71,8 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
         // Split configs (favorecidos do split por BoletoConfig)
         Route::post('tenants/{tenant}/boleto-configs/{boletoConfig}/split-configs', [SplitConfigController::class, 'store'])
             ->name('tenants.boleto-configs.split-configs.store');
+        Route::put('tenants/{tenant}/boleto-configs/{boletoConfig}/split-configs/{splitConfig}', [SplitConfigController::class, 'update'])
+            ->name('tenants.boleto-configs.split-configs.update');
         Route::delete('tenants/{tenant}/boleto-configs/{boletoConfig}/split-configs/{splitConfig}', [SplitConfigController::class, 'destroy'])
             ->name('tenants.boleto-configs.split-configs.destroy');
 

@@ -47,8 +47,26 @@ const ROLE_LABELS = {
         ]">
 
             <!-- Logo -->
-            <div class="flex h-16 items-center px-6 border-b border-white/10">
-                <span class="text-xl font-bold text-white tracking-tight">Payproxy</span>
+            <div class="flex h-16 items-center gap-3 px-5 border-b border-white/10">
+                <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="50,18 77.7,34 77.7,66 50,82 22.3,66 22.3,34" fill="#ffffff" fill-opacity="0.12"/>
+                    <line x1="50" y1="50" x2="50"   y2="18"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="34"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="66"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="50"   y2="82"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="66"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="34"  stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="50"   cy="18" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="77.7" cy="34" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="77.7" cy="66" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="50"   cy="82" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="22.3" cy="66" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="22.3" cy="34" r="3.5" fill="#ffffff" fill-opacity="0.65"/>
+                    <circle cx="50" cy="50" r="10" fill="#1ec86e"/>
+                    <polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5"
+                             fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="4" stroke-linejoin="round"/>
+                </svg>
+                <span class="text-base font-bold text-white tracking-tight">Payproxy</span>
             </div>
 
             <!-- Nav -->
@@ -103,7 +121,27 @@ const ROLE_LABELS = {
                             d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-                <span class="text-base font-bold text-[#2d5294]">Payproxy</span>
+                <span class="flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="50,18 77.7,34 77.7,66 50,82 22.3,66 22.3,34" fill="#e0e8ff"/>
+                        <line x1="50" y1="50" x2="50"   y2="18"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="77.7" y2="34"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="77.7" y2="66"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="50"   y2="82"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="22.3" y2="66"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="22.3" y2="34"  stroke="#5068d0" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="50"   cy="18" r="4" fill="#2a3db5"/>
+                        <circle cx="77.7" cy="34" r="4" fill="#2a3db5"/>
+                        <circle cx="77.7" cy="66" r="4" fill="#2a3db5"/>
+                        <circle cx="50"   cy="82" r="4" fill="#2a3db5"/>
+                        <circle cx="22.3" cy="66" r="4" fill="#2a3db5"/>
+                        <circle cx="22.3" cy="34" r="4" fill="#2a3db5"/>
+                        <circle cx="50" cy="50" r="10" fill="#1ec86e"/>
+                        <polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5"
+                                 fill="none" stroke="#4855c4" stroke-width="4" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-base font-bold text-[#2d5294]">Payproxy</span>
+                </span>
             </div>
 
             <!-- Flash messages -->

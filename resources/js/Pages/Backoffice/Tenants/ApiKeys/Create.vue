@@ -58,7 +58,7 @@ function updateMaxAmount(e) {
             <span class="text-[#2d5294] font-medium">Nova API Key</span>
         </nav>
 
-        <div class="max-w-xl">
+        <div>
             <div class="mb-6">
                 <h1 class="text-xl font-bold text-[#2d5294]">Nova API Key</h1>
                 <p class="text-sm text-gray-400 mt-1">Configure os escopos e limites para este acesso.</p>

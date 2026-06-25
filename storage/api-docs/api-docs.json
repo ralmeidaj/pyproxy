@@ -1,0 +1,379 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Payproxy API",
+        "description": "API pública para emissão de boletos bancários com split de pagamento. Autenticação via API Key no header `X-Api-Key`.",
+        "contact": {
+            "name": "Ciberian",
+            "email": "suporte@ciberian.com.br"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api/v1",
+            "description": "Produção"
+        }
+    ],
+    "paths": {
+        "/boletos": {
+            "post": {
+                "tags": [
+                    "Boletos"
+                ],
+                "summary": "Emitir boleto",
+                "description": "Emite um boleto registrado com split de pagamento automático conforme a configuração do tenant. A operação é idempotente: requisições com o mesmo `pedido_numero` retornam o boleto existente.",
+                "operationId": "39a41f6cc97183acbd1e03e236b54883",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "pedido_numero",
+                                    "valor",
+                                    "vencimento",
+                                    "nome_cliente",
+                                    "cpf_cliente",
+                                    "endereco_cliente",
+                                    "numero_cliente",
+                                    "bairro_cliente",
+                                    "cidade_cliente",
+                                    "estado_cliente",
+                                    "cep_cliente"
+                                ],
+                                "properties": {
+                                    "pedido_numero": {
+                                        "description": "Referência externa única do tenant",
+                                        "type": "string",
+                                        "example": "NF-2024-001"
+                                    },
+                                    "valor": {
+                                        "description": "Valor do boleto em reais (string com 2 casas decimais)",
+                                        "type": "string",
+                                        "example": "150.00"
+                                    },
+                                    "vencimento": {
+                                        "description": "Data de vencimento no formato MM/DD/YYYY",
+                                        "type": "string",
+                                        "example": "07/30/2026"
+                                    },
+                                    "nome_cliente": {
+                                        "description": "Nome completo do pagador",
+                                        "type": "string",
+                                        "example": "João da Silva"
+                                    },
+                                    "cpf_cliente": {
+                                        "description": "CPF ou CNPJ do pagador (formatado ou somente dígitos)",
+                                        "type": "string",
+                                        "example": "123.456.789-09"
+                                    },
+                                    "email_cliente": {
+                                        "description": "E-mail do pagador (opcional)",
+                                        "type": "string",
+                                        "example": "joao@example.com"
+                                    },
+                                    "telefone_cliente": {
+                                        "description": "Telefone do pagador (opcional)",
+                                        "type": "string",
+                                        "example": "71999990000"
+                                    },
+                                    "endereco_cliente": {
+                                        "description": "Logradouro do pagador",
+                                        "type": "string",
+                                        "example": "Rua das Flores"
+                                    },
+                                    "numero_cliente": {
+                                        "description": "Número do endereço",
+                                        "type": "string",
+                                        "example": "42"
+                                    },
+                                    "complemento_cliente": {
+                                        "description": "Complemento (opcional)",
+                                        "type": "string",
+                                        "example": "Apto 3"
+                                    },
+                                    "bairro_cliente": {
+                                        "description": "Bairro do pagador",
+                                        "type": "string",
+                                        "example": "Centro"
+                                    },
+                                    "cidade_cliente": {
+                                        "description": "Cidade do pagador",
+                                        "type": "string",
+                                        "example": "Salvador"
+                                    },
+                                    "estado_cliente": {
+                                        "description": "UF do pagador (2 letras)",
+                                        "type": "string",
+                                        "example": "BA"
+                                    },
+                                    "cep_cliente": {
+                                        "description": "CEP do pagador",
+                                        "type": "string",
+                                        "example": "40000-000"
+                                    },
+                                    "metadata": {
+                                        "description": "Dados adicionais livres (opcional)",
+                                        "type": "object",
+                                        "example": {
+                                            "tipo": "IPTU"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Boleto emitido com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BoletoResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API Key inválida ou ausente"
+                    },
+                    "403": {
+                        "description": "Tenant inativo ou escopo insuficiente"
+                    },
+                    "422": {
+                        "description": "Dados inválidos"
+                    },
+                    "429": {
+                        "description": "Rate limit atingido"
+                    },
+                    "502": {
+                        "description": "Falha na comunicação com o parceiro bancário"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ]
+            }
+        },
+        "/boletos/{nossonumero}": {
+            "get": {
+                "tags": [
+                    "Boletos"
+                ],
+                "summary": "Consultar boleto",
+                "description": "Retorna os dados de um boleto pelo seu ID interno (nossonumero).",
+                "operationId": "0d076a7eae0927c2e89f44937c287899",
+                "parameters": [
+                    {
+                        "name": "nossonumero",
+                        "in": "path",
+                        "description": "ID interno do boleto",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados do boleto",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BoletoResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API Key inválida ou ausente"
+                    },
+                    "404": {
+                        "description": "Boleto não encontrado ou pertence a outro tenant"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Boletos"
+                ],
+                "summary": "Cancelar boleto",
+                "description": "Cancela um boleto pendente. Boletos pagos ou já cancelados não podem ser cancelados (RN-03).",
+                "operationId": "46c1b59203528e902f62bddb285a4e30",
+                "parameters": [
+                    {
+                        "name": "nossonumero",
+                        "in": "path",
+                        "description": "ID interno do boleto",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Boleto cancelado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Boleto cancelado com sucesso."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API Key inválida ou ausente"
+                    },
+                    "404": {
+                        "description": "Boleto não encontrado ou pertence a outro tenant"
+                    },
+                    "422": {
+                        "description": "Boleto não pode ser cancelado (status atual não permite)"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "BoletoResource": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "nossonumero": {
+                        "type": "string",
+                        "example": "559353941"
+                    },
+                    "pedido_numero": {
+                        "type": "string",
+                        "example": "NF-2024-001"
+                    },
+                    "valor": {
+                        "type": "string",
+                        "example": "150.00"
+                    },
+                    "vencimento": {
+                        "type": "string",
+                        "example": "07/30/2026"
+                    },
+                    "nome_cliente": {
+                        "type": "string",
+                        "example": "João da Silva"
+                    },
+                    "cpf_cliente": {
+                        "type": "string",
+                        "example": "12345678909"
+                    },
+                    "email_cliente": {
+                        "type": "string",
+                        "example": "joao@example.com"
+                    },
+                    "linhaDigitavel": {
+                        "type": "string",
+                        "example": "48190.00003 00005.15055 ..."
+                    },
+                    "linkBoleto": {
+                        "type": "string",
+                        "example": "https://api.pjbank.com.br/boletos/abc123"
+                    },
+                    "linkpix": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "dda_registered": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "cancelled",
+                            "expired"
+                        ]
+                    },
+                    "status_label": {
+                        "type": "string",
+                        "example": "Pendente"
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-07-01T12:00:00-03:00"
+                    },
+                    "split": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "nome": {
+                                    "type": "string",
+                                    "example": "ORBY TECNOLOGIA"
+                                },
+                                "valor_fixo": {
+                                    "type": "string",
+                                    "example": "11.20"
+                                },
+                                "porcentagem_encargos": {
+                                    "type": "number",
+                                    "example": 0
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "ApiKey": {
+                "type": "apiKey",
+                "description": "API Key gerada no backoffice Payproxy. Formato: `ppx_<40 chars>`.",
+                "name": "X-Api-Key",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Boletos",
+            "description": "Emissão, consulta e cancelamento de boletos"
+        }
+    ]
+}

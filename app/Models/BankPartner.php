@@ -37,6 +37,11 @@ class BankPartner extends Model
 
     public function supports(string $feature): bool
     {
-        return in_array($feature, $this->features ?? [], true);
+        $features = $this->features ?? [];
+        // Suporta formato objeto {"split":true} e formato lista ["split"]
+        if (array_is_list($features)) {
+            return in_array($feature, $features, true);
+        }
+        return !empty($features[$feature]);
     }
 }

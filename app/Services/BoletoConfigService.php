@@ -50,16 +50,10 @@ class BoletoConfigService
                 $config->tenant->boletoConfigs()->where('id', '!=', $config->id)->update(['is_default' => false]);
             }
 
-            $credentials = json_encode([
-                'api_key' => $data->credentialApiKey,
-                'chave'   => $data->credentialChave,
-            ]);
-
-            $config->update([
+            $updateData = [
                 'bank_partner_id'            => $data->bankPartnerId,
                 'name'                       => $data->name,
                 'is_default'                 => $data->isDefault,
-                'credentials_encrypted'      => $this->crypto->encrypt($credentials),
                 'prazo_vencimento_dias'      => $data->prazoVencimentoDias,
                 'multa_percentual'           => $data->multaPercentual,
                 'juros_percentual_mes'       => $data->jurosPercentualMes,
@@ -67,10 +61,24 @@ class BoletoConfigService
                 'desconto_antecedencia_dias' => $data->descontoAntecedenciaDias,
                 'instrucoes'                 => $data->instrucoes,
                 'webhook_url'                => $data->webhookUrl,
-                'webhook_secret_encrypted'   => $data->webhookSecret
-                    ? $this->crypto->encrypt($data->webhookSecret)
-                    : null,
-            ]);
+            ];
+
+            // Só atualiza credenciais se pelo menos um campo foi preenchido
+            if ($data->credentialApiKey || $data->credentialChave) {
+                $existing  = $config->getCredentials();
+                $credentials = json_encode([
+                    'api_key' => $data->credentialApiKey ?: ($existing['api_key'] ?? ''),
+                    'chave'   => $data->credentialChave   ?: ($existing['chave']   ?? ''),
+                ]);
+                $updateData['credentials_encrypted'] = $this->crypto->encrypt($credentials);
+            }
+
+            // Só atualiza webhook secret se foi preenchido
+            if ($data->webhookSecret) {
+                $updateData['webhook_secret_encrypted'] = $this->crypto->encrypt($data->webhookSecret);
+            }
+
+            $config->update($updateData);
 
             return $config->fresh();
         });

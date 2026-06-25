@@ -27,6 +27,7 @@ class PJBankService implements BankPartnerInterface
             'pedido_numero'       => $data->externalRef,
             'nome_cliente'        => $data->payerName,
             'cpf_cliente'         => $data->payerDocument,
+            'email_cliente'       => $data->payerEmail ?? '',
             'endereco_cliente'    => $data->payerAddress['logradouro'] ?? '',
             'numero_cliente'      => $data->payerAddress['numero'] ?? '',
             'complemento_cliente' => $data->payerAddress['complemento'] ?? '',
@@ -80,7 +81,7 @@ class PJBankService implements BankPartnerInterface
             digitableLine:    $body['linhaDigitavel'] ?? '',
             pixQrCode:        $body['linkpix'] ?? null,
             pdfUrl:           $body['linkBoleto'] ?? null,
-            ddaRegistered:    false,
+            ddaRegistered:    true,
             tokenFacilitador: $body['token_facilitador'] ?? null,
         );
     }

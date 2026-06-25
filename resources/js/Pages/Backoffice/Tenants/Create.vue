@@ -26,7 +26,7 @@ function submit() {
             <span class="text-[#2d5294] font-medium">Novo Tenant</span>
         </nav>
 
-        <div class="max-w-2xl">
+        <div>
             <div class="mb-6">
                 <h1 class="text-xl font-bold text-[#2d5294]">Cadastrar Tenant</h1>
                 <p class="text-sm text-gray-400 mt-1">Preencha os dados do novo cliente da plataforma.</p>

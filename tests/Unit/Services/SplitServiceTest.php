@@ -77,10 +77,10 @@ class SplitServiceTest extends TestCase
     {
         $splits = $this->makeSplits([
             ['type' => SplitType::Percentage, 'value' => 20],
-            ['type' => SplitType::FixedAmount, 'value' => 1000],
+            ['type' => SplitType::FixedAmount, 'value' => 10.00], // R$10 = 1000 cents
         ]);
 
-        // 20% of 10000 = 2000, fixed = 1000, total = 3000 < 10000
+        // 20% of 10000 = 2000 cents, fixed R$10 = 1000 cents, total = 3000 < 10000
         $this->service->validate($splits, 10000);
         $this->addToAssertionCount(1);
     }
@@ -119,13 +119,13 @@ class SplitServiceTest extends TestCase
     public function test_calculate_fixed_split_correctly(): void
     {
         $config = $this->mockConfigWithSplits([
-            ['name' => 'Taxa', 'type' => SplitType::FixedAmount, 'value' => 150, 'bank_partner_payee_id' => 'xyz'],
+            ['name' => 'Taxa', 'type' => SplitType::FixedAmount, 'value' => 1.50, 'bank_partner_payee_id' => 'xyz'], // R$1.50
         ]);
 
         $result = $this->service->calculate($config, 10000);
 
         $this->assertCount(1, $result);
-        $this->assertSame(150, $result[0]['amount_cents']); // fixed 150 cents
+        $this->assertSame(150, $result[0]['amount_cents']); // R$1.50 × 100 = 150 cents
         $this->assertSame('fixed_amount', $result[0]['type']);
     }
 
@@ -144,15 +144,15 @@ class SplitServiceTest extends TestCase
     public function test_calculate_multiple_splits(): void
     {
         $config = $this->mockConfigWithSplits([
-            ['name' => 'Parceiro A', 'type' => SplitType::Percentage, 'value' => 20, 'bank_partner_payee_id' => 'a'],
-            ['name' => 'Taxa fixa',  'type' => SplitType::FixedAmount, 'value' => 500, 'bank_partner_payee_id' => 'b'],
+            ['name' => 'Parceiro A', 'type' => SplitType::Percentage, 'value' => 20,   'bank_partner_payee_id' => 'a'],
+            ['name' => 'Taxa fixa',  'type' => SplitType::FixedAmount, 'value' => 5.00, 'bank_partner_payee_id' => 'b'], // R$5.00
         ]);
 
         $result = $this->service->calculate($config, 50000);
 
         $this->assertCount(2, $result);
         $this->assertSame(10000, $result[0]['amount_cents']); // 20% of 50000
-        $this->assertSame(500,   $result[1]['amount_cents']); // fixed 500
+        $this->assertSame(500,   $result[1]['amount_cents']); // R$5.00 × 100 = 500 cents
     }
 
     // --- helpers ---

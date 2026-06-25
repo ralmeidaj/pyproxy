@@ -1,5 +1,6 @@
 ﻿<script setup>
-import { useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { useForm, router } from '@inertiajs/vue3'
 import BackofficeLayout from '@/Layouts/BackofficeLayout.vue'
 
 const props = defineProps({
@@ -8,6 +9,8 @@ const props = defineProps({
     bankPartners: Array,
     splits:       Array,
 })
+
+const editingId = ref(null)
 
 const splitForm = useForm({
     name:     '',
@@ -29,6 +32,42 @@ function addSplit() {
         route('backoffice.tenants.boleto-configs.split-configs.store', [props.tenant.id, props.config.id]),
         { onSuccess: () => splitForm.reset() }
     )
+}
+
+function startEdit(split) {
+    editingId.value = split.id
+    splitForm.name     = split.name
+    splitForm.type     = split.type
+    splitForm.value    = parseFloat(split.value)
+    splitForm.priority = split.priority ?? 0
+    splitForm.payee_details = {
+        nome:                 split.payee_details?.nome                ?? '',
+        cnpj:                 split.payee_details?.cnpj                ?? '',
+        banco_repasse:        split.payee_details?.banco_repasse       ?? '',
+        agencia_repasse:      split.payee_details?.agencia_repasse     ?? '',
+        conta_repasse:        split.payee_details?.conta_repasse       ?? '',
+        porcentagem_encargos: split.payee_details?.porcentagem_encargos ?? 0,
+    }
+    splitForm.clearErrors()
+}
+
+function saveEdit() {
+    splitForm.put(
+        route('backoffice.tenants.boleto-configs.split-configs.update', [props.tenant.id, props.config.id, editingId.value]),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                editingId.value = null
+                splitForm.reset()
+                router.reload({ only: ['splits'] })
+            },
+        }
+    )
+}
+
+function cancelEdit() {
+    editingId.value = null
+    splitForm.reset()
 }
 
 function removeSplit(splitId) {
@@ -113,12 +152,12 @@ function submit() {
                     <p class="text-xs text-gray-500 mb-3">Deixe em branco para manter as credenciais atuais.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nova API Key</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Credencial PJBank <span class="text-xs text-gray-400 font-normal">(vai na URL)</span></label>
                             <input v-model="form.credential_api_key" type="password" autocomplete="new-password"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nova Chave / Credencial ID</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Chave PJBank <span class="text-xs text-gray-400 font-normal">(header x-chave)</span></label>
                             <input v-model="form.credential_chave" type="password" autocomplete="new-password"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]" />
                         </div>
@@ -198,7 +237,9 @@ function submit() {
                             </thead>
                             <tbody>
                                 <tr v-for="(split, i) in splits" :key="split.id"
-                                    :class="i % 2 === 1 ? 'bg-[#f5f8fc]' : 'bg-white'">
+                                    :class="[
+                                        editingId === split.id ? 'bg-blue-50 ring-2 ring-inset ring-[#3a9fd8]' : (i % 2 === 1 ? 'bg-[#f5f8fc]' : 'bg-white')
+                                    ]">
                                     <td class="px-4 py-2 font-medium">{{ split.name }}</td>
                                     <td class="px-4 py-2 text-gray-500 text-xs">{{ split.payee_details?.cnpj ?? '—' }}</td>
                                     <td class="px-4 py-2 text-gray-500 text-xs">
@@ -208,10 +249,14 @@ function submit() {
                                     </td>
                                     <td class="px-4 py-2">{{ split.type === 'percentage' ? 'Percentual' : 'Fixo' }}</td>
                                     <td class="px-4 py-2 text-right">
-                                        {{ split.type === 'percentage' ? split.value + '%' : 'R$ ' + Number(split.value).toFixed(2) }}
+                                        {{ split.type === 'percentage' ? parseFloat(split.value) + '%' : 'R$ ' + Number(split.value).toFixed(2) }}
                                     </td>
                                     <td class="px-4 py-2 text-center">{{ split.priority }}</td>
-                                    <td class="px-4 py-2 text-center">
+                                    <td class="px-4 py-2 text-center flex items-center justify-center gap-3">
+                                        <button type="button" @click="startEdit(split)"
+                                            class="text-[#2d7ab5] hover:text-[#1e5a8a] text-xs font-medium">
+                                            Editar
+                                        </button>
                                         <button type="button" @click="removeSplit(split.id)"
                                             class="text-red-500 hover:text-red-700 text-xs font-medium">
                                             Remover
@@ -223,9 +268,11 @@ function submit() {
                     </div>
                     <p v-else class="text-sm text-gray-400 mb-6">Nenhum favorecido configurado.</p>
 
-                    <!-- Formulário para adicionar novo split -->
-                    <div class="border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4">Adicionar Favorecido</h3>
+                    <!-- Formulário para adicionar / editar split -->
+                    <div :class="editingId ? 'border border-[#3a9fd8] rounded-xl p-5 bg-blue-50' : 'border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50'">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
+                            {{ editingId ? 'Editar Favorecido' : 'Adicionar Favorecido' }}
+                        </h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Nome do Favorecido</label>
@@ -286,11 +333,17 @@ function submit() {
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]" />
                             </div>
                         </div>
-                        <div class="flex justify-end">
-                            <button type="button" @click="addSplit" :disabled="splitForm.processing"
+                        <div class="flex justify-end gap-3">
+                            <button v-if="editingId" type="button" @click="cancelEdit"
+                                class="px-5 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="button"
+                                @click="editingId ? saveEdit() : addSplit()"
+                                :disabled="splitForm.processing"
                                 class="px-5 py-2 text-sm bg-[#2d5294] text-white rounded-lg hover:bg-[#1e3d75] disabled:opacity-50 transition-colors">
-                                <span v-if="splitForm.processing">Adicionando...</span>
-                                <span v-else>+ Adicionar Favorecido</span>
+                                <span v-if="splitForm.processing">{{ editingId ? 'Salvando...' : 'Adicionando...' }}</span>
+                                <span v-else>{{ editingId ? 'Salvar alterações' : '+ Adicionar Favorecido' }}</span>
                             </button>
                         </div>
                     </div>

@@ -74,13 +74,13 @@ function submit() {
                     <h2 class="text-sm font-semibold text-[#2d7ab5] uppercase tracking-wide mb-4">Credenciais PJBank</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Credencial PJBank <span class="text-xs text-gray-400 font-normal">(vai na URL)</span></label>
                             <input v-model="form.credential_api_key" type="password" autocomplete="new-password"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]" />
                             <p v-if="form.errors.credential_api_key" class="text-red-500 text-xs mt-1">{{ form.errors.credential_api_key }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Chave / Credencial ID</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Chave PJBank <span class="text-xs text-gray-400 font-normal">(header x-chave)</span></label>
                             <input v-model="form.credential_chave" type="password" autocomplete="new-password"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]" />
                             <p v-if="form.errors.credential_chave" class="text-red-500 text-xs mt-1">{{ form.errors.credential_chave }}</p>

@@ -18,10 +18,25 @@ function submit() {
         <div class="w-full max-w-sm">
 
             <!-- Logo -->
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur mb-4">
-                    <span class="text-2xl">📄</span>
-                </div>
+            <div class="flex flex-col items-center mb-8">
+                <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-4">
+                    <polygon points="50,18 77.7,34 77.7,66 50,82 22.3,66 22.3,34" fill="#ffffff" fill-opacity="0.18"/>
+                    <line x1="50" y1="50" x2="50"   y2="18"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="34"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="77.7" y2="66"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="50"   y2="82"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="66"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="50" y1="50" x2="22.3" y2="34"  stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="50"   cy="18" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="77.7" cy="34" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="77.7" cy="66" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="50"   cy="82" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="22.3" cy="66" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="22.3" cy="34" r="4" fill="#ffffff" fill-opacity="0.75"/>
+                    <circle cx="50" cy="50" r="10" fill="#1ec86e"/>
+                    <polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5"
+                             fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="4" stroke-linejoin="round"/>
+                </svg>
                 <h1 class="text-2xl font-bold text-white">Portal do Tenant</h1>
                 <p class="text-white/70 text-sm mt-1">Acesse sua conta Payproxy</p>
             </div>

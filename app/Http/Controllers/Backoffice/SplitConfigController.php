@@ -26,6 +26,21 @@ class SplitConfigController extends Controller
             ->with('success', 'Favorecido de split adicionado.');
     }
 
+    public function update(StoreSplitConfigRequest $request, Tenant $tenant, BoletoConfig $boletoConfig, SplitConfig $splitConfig): RedirectResponse
+    {
+        $splitConfig->update([
+            'name'          => $request->name,
+            'type'          => $request->type,
+            'value'         => $request->value,
+            'priority'      => $request->integer('priority', 0),
+            'payee_details' => $request->payee_details,
+        ]);
+
+        return redirect()
+            ->route('backoffice.tenants.boleto-configs.edit', [$tenant, $boletoConfig])
+            ->with('success', 'Favorecido atualizado.');
+    }
+
     public function destroy(Tenant $tenant, BoletoConfig $boletoConfig, SplitConfig $splitConfig): RedirectResponse
     {
         $splitConfig->delete();
