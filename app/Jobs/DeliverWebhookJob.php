@@ -11,7 +11,7 @@ class DeliverWebhookJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 3;
+    public int $tries = 1; // retries controlados via webhooks:retry scheduler
 
     public function __construct(private readonly int $deliveryId) {}
 

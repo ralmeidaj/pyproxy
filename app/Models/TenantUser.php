@@ -29,6 +29,7 @@ class TenantUser extends Authenticatable
         'totp_confirmed_at',
         'last_login_at',
         'last_login_ip',
+        'password_changed_at',
     ];
 
     protected $hidden = [
@@ -41,12 +42,13 @@ class TenantUser extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'          => 'hashed',
-            'active'            => 'boolean',
-            'totp_enabled'      => 'boolean',
-            'totp_confirmed_at' => 'datetime',
-            'invite_expires_at' => 'datetime',
-            'last_login_at'     => 'datetime',
+            'password'            => 'hashed',
+            'active'              => 'boolean',
+            'totp_enabled'        => 'boolean',
+            'totp_confirmed_at'   => 'datetime',
+            'invite_expires_at'   => 'datetime',
+            'last_login_at'       => 'datetime',
+            'password_changed_at' => 'datetime',
         ];
     }
 

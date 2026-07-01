@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\DeliverWebhookJob;
 use App\Models\Boleto;
 use App\Models\WebhookDelivery;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +29,8 @@ class WebhookDeliveryService
             'status'    => 'pending',
         ]);
 
-        $this->attempt($delivery, $config->getWebhookSecret());
+        // RF-27: dispara job assíncrono; retries gerenciados via webhooks:retry scheduler
+        DeliverWebhookJob::dispatch($delivery->id);
     }
 
     public function attempt(WebhookDelivery $delivery, ?string $secret): void

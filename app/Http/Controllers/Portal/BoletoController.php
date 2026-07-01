@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Portal;
 
 use App\DTOs\IssueBoletoData;
 use App\Enums\BoletoStatus;
+use App\Enums\NotificationEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Boleto;
 use App\Services\BoletoService;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +17,10 @@ use Inertia\Response;
 
 class BoletoController extends Controller
 {
-    public function __construct(private readonly BoletoService $boletoService) {}
+    public function __construct(
+        private readonly BoletoService      $boletoService,
+        private readonly NotificationService $notifications,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -125,7 +130,8 @@ class BoletoController extends Controller
 
     public function show(Boleto $boleto): Response
     {
-        $tenant = Auth::guard('portal')->user()->tenant;
+        $user   = Auth::guard('portal')->user();
+        $tenant = $user->tenant;
 
         abort_if($boleto->tenant_id !== $tenant->id, 404);
 
@@ -134,9 +140,27 @@ class BoletoController extends Controller
         return Inertia::render('Portal/Boletos/Show', [
             'boleto' => array_merge($boleto->toArray(), [
                 'status_label' => $boleto->status->label(),
-                'can_cancel'   => $boleto->status->canCancel() && Auth::guard('portal')->user()->canWrite(),
+                'can_cancel'   => $boleto->status->canCancel() && $user->canWrite(),
+                'can_resend'   => $boleto->status === BoletoStatus::Pending
+                                  && $boleto->payer_email !== null
+                                  && $user->canWrite(),
             ]),
         ]);
+    }
+
+    public function resend(Boleto $boleto): RedirectResponse
+    {
+        $user   = Auth::guard('portal')->user();
+        $tenant = $user->tenant;
+
+        abort_if($boleto->tenant_id !== $tenant->id, 404);
+        abort_if(! $user->canWrite(), 403, 'Sem permissão para reenviar notificações.');
+        abort_if($boleto->status !== BoletoStatus::Pending, 422, 'Só é possível reenviar notificações de boletos pendentes.');
+        abort_if(! $boleto->payer_email, 422, 'Este boleto não possui e-mail do pagador cadastrado.');
+
+        $this->notifications->notify($boleto, NotificationEvent::Issued);
+
+        return back()->with('success', 'Notificação reenviada com sucesso.');
     }
 
     public function cancel(Boleto $boleto): RedirectResponse

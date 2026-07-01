@@ -23,6 +23,13 @@ function submitStatus() {
     })
 }
 
+const approveForm = useForm({})
+
+function confirmApprove() {
+    if (! confirm(`Aprovar o tenant "${props.tenant.name}"?\n\nEle terá acesso completo à plataforma e poderá emitir boletos.`)) return
+    approveForm.post(route('backoffice.tenants.approve', props.tenant.id))
+}
+
 const revokeForm = useForm({})
 function revokeKey(apiKeyId) {
     if (!confirm('Revogar esta API key? Esta ação não pode ser desfeita.')) return
@@ -75,6 +82,23 @@ function formatDate(d) {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Banner de aprovação pendente -->
+        <div v-if="tenant.status === 'pending_approval'"
+            class="mb-5 flex items-center justify-between gap-4 rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4">
+            <div>
+                <p class="font-semibold text-amber-800">Aguardando aprovação</p>
+                <p class="text-sm text-amber-600 mt-0.5">
+                    Revise os dados do tenant e clique em Aprovar para liberar o acesso à plataforma.
+                </p>
+            </div>
+            <button
+                @click="confirmApprove"
+                :disabled="approveForm.processing"
+                class="flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
+                {{ approveForm.processing ? 'Aprovando…' : '✓ Aprovar Tenant' }}
+            </button>
         </div>
 
         <!-- Breadcrumb -->

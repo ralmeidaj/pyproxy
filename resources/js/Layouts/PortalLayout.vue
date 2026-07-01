@@ -25,12 +25,18 @@ function logout() {
     router.post(route('portal.auth.logout'))
 }
 
-const navItems = [
-    { name: 'Dashboard',  route: 'portal.dashboard',      icon: '📊' },
-    { name: 'Boletos',    route: 'portal.boletos.index',  icon: '📄' },
-    { name: 'Relatórios', route: 'portal.reports.index',  icon: '📈' },
-    { name: 'Perfil',     route: 'portal.profile',        icon: '👤' },
-]
+const navItems = computed(() => {
+    const items = [
+        { name: 'Dashboard',  route: 'portal.dashboard',      icon: '📊' },
+        { name: 'Boletos',    route: 'portal.boletos.index',  icon: '📄' },
+        { name: 'Relatórios', route: 'portal.reports.index',  icon: '📈' },
+    ]
+    if (user.value?.role === 'admin') {
+        items.push({ name: 'Usuários', route: 'portal.users.index', icon: '👥' })
+    }
+    items.push({ name: 'Perfil', route: 'portal.profile', icon: '👤' })
+    return items
+})
 
 const roleLabels = {
     admin:    'Administrador',

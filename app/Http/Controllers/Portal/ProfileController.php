@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PasswordPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,12 +27,11 @@ class ProfileController extends Controller
     {
         $request->validate([
             'current_password' => ['required', 'string'],
-            'password'         => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+            'password'         => ['required', 'confirmed', new PasswordPolicy()],
         ], [
             'current_password.required' => 'Informe a senha atual.',
             'password.required'         => 'A nova senha é obrigatória.',
             'password.confirmed'         => 'A confirmação de senha não confere.',
-            'password.min'              => 'A senha deve ter no mínimo 8 caracteres.',
         ]);
 
         $user = Auth::guard('portal')->user();
@@ -41,7 +40,14 @@ class ProfileController extends Controller
             return back()->withErrors(['current_password' => 'Senha atual incorreta.']);
         }
 
-        $user->update(['password' => $request->password]);
+        if (Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'A nova senha não pode ser igual à senha atual.']);
+        }
+
+        $user->update([
+            'password'            => $request->password,
+            'password_changed_at' => now(),
+        ]);
 
         return back()->with('success', 'Senha alterada com sucesso.');
     }

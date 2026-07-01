@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Backoffice\ApiKeyController;
+use App\Http\Controllers\Backoffice\Auth\ChangePasswordController as BackofficeChangePasswordController;
 use App\Http\Controllers\Backoffice\Auth\LoginController;
 use App\Http\Controllers\Backoffice\Auth\TotpController;
 use App\Http\Controllers\Backoffice\BoletoConfigController;
@@ -10,17 +11,78 @@ use App\Http\Controllers\Backoffice\ReportController;
 use App\Http\Controllers\Backoffice\SplitConfigController;
 use App\Http\Controllers\Backoffice\TenantController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\Portal\Auth\AcceptInviteController;
+use App\Http\Controllers\Portal\Auth\ChangePasswordController as PortalChangePasswordController;
 use App\Http\Controllers\Portal\Auth\LoginController as PortalLoginController;
 use App\Http\Controllers\Portal\Auth\TotpController as PortalTotpController;
 use App\Http\Controllers\Portal\BoletoController as PortalBoletoController;
 use App\Http\Controllers\Portal\DashboardController as PortalDashboardController;
 use App\Http\Controllers\Portal\ProfileController as PortalProfileController;
 use App\Http\Controllers\Portal\ReportController as PortalReportController;
+use App\Http\Controllers\Portal\TenantUsersController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class)->name('health');
 
 Route::get('/', fn () => redirect()->route('backoffice.dashboard'));
+
+// ─────────────────────────────────────────────
+// Debug — apenas em ambientes não-produção
+// ─────────────────────────────────────────────
+if (! app()->isProduction()) {
+    Route::get('/debug/pjbank-payload', function (\Illuminate\Http\Request $request) {
+        $captured = null;
+
+        \Illuminate\Support\Facades\Http::fake(function (\Illuminate\Http\Client\Request $req) use (&$captured) {
+            $captured = [
+                'url'          => $req->url(),
+                'method'       => $req->method(),
+                'content_type' => $req->header('Content-Type')[0] ?? null,
+                'body'         => $req->data(),
+            ];
+            return \Illuminate\Support\Facades\Http::response(['nossonumero' => 'DEBUG-PREVIEW'], 200);
+        });
+
+        $tenant = \App\Models\Tenant::where('status', 'active')
+            ->with(['boletoConfigs.bankPartner', 'boletoConfigs.splitConfigs'])
+            ->firstOrFail();
+
+        $config = $tenant->boletoConfigs
+            ->where('status', 'active')
+            ->first();
+
+        if (! $config) {
+            return response()->json(['error' => 'Nenhum BoletoConfig ativo para este tenant.'], 404);
+        }
+
+        $amountCents = (int) round((float) $request->query('valor', '100.00') * 100);
+
+        $splits = app(\App\Services\SplitService::class)->calculate($config, $amountCents);
+
+        $data = new \App\DTOs\IssueBoletoData(
+            externalRef:   'DEBUG-PREVIEW-' . now()->format('YmdHis'),
+            amountCents:   $amountCents,
+            dueDate:       now()->addDays(3)->toDateString(),
+            payerName:     'Pagador Teste',
+            payerDocument: '000.000.000-00',
+            payerEmail:    'teste@debug.com',
+            payerPhone:    null,
+            payerAddress:  [
+                'logradouro'  => 'Rua das Flores',
+                'numero'      => '100',
+                'complemento' => '',
+                'bairro'      => 'Centro',
+                'cidade'      => 'Salvador',
+                'estado'      => 'BA',
+                'cep'         => '40000-000',
+            ],
+        );
+
+        app(\App\Services\BankPartners\PJBankService::class)->issueBoleto($data, $config, $splits);
+
+        return response()->json($captured, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    })->name('debug.pjbank-payload');
+}
 
 // ─────────────────────────────────────────────
 // Backoffice — admins Ciberian
@@ -39,7 +101,11 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
         ->name('auth.logout')
         ->middleware('auth.backoffice');
 
-    Route::middleware('auth.backoffice')->group(function () {
+    Route::middleware(['auth.backoffice', 'check.password.expiry:backoffice'])->group(function () {
+        // Troca de senha obrigatória (excluída do check pelo próprio middleware)
+        Route::get('auth/password/change', [BackofficeChangePasswordController::class, 'show'])->name('auth.password.change.show');
+        Route::post('auth/password/change', [BackofficeChangePasswordController::class, 'store'])->name('auth.password.change.store');
+
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('auth/totp/setup', [TotpController::class, 'setupShow'])->name('auth.totp.setup.show');
@@ -51,6 +117,9 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
 
         Route::patch('tenants/{tenant}/status', [TenantController::class, 'updateStatus'])
             ->name('tenants.status');
+
+        Route::post('tenants/{tenant}/approve', [TenantController::class, 'approve'])
+            ->name('tenants.approve');
 
         Route::get('tenants/{tenant}/api-keys/create', [ApiKeyController::class, 'create'])
             ->name('tenants.api-keys.create');
@@ -91,6 +160,10 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
 // ─────────────────────────────────────────────
 Route::prefix('portal')->name('portal.')->group(function () {
 
+    // Aceitar convite — público (sem autenticação)
+    Route::get('invite/{token}', [AcceptInviteController::class, 'show'])->name('invite.show');
+    Route::post('invite/{token}', [AcceptInviteController::class, 'store'])->name('invite.store');
+
     Route::middleware('guest:portal')->name('auth.')->prefix('auth')->group(function () {
         Route::get('login', [PortalLoginController::class, 'show'])->name('login.show');
         Route::post('login', [PortalLoginController::class, 'store'])->name('login.store');
@@ -103,7 +176,11 @@ Route::prefix('portal')->name('portal.')->group(function () {
         ->name('auth.logout')
         ->middleware('auth.portal');
 
-    Route::middleware('auth.portal')->group(function () {
+    Route::middleware(['auth.portal', 'check.password.expiry:portal'])->group(function () {
+        // Troca de senha obrigatória (excluída do check pelo próprio middleware)
+        Route::get('auth/password/change', [PortalChangePasswordController::class, 'show'])->name('auth.password.change.show');
+        Route::post('auth/password/change', [PortalChangePasswordController::class, 'store'])->name('auth.password.change.store');
+
         Route::get('dashboard', [PortalDashboardController::class, 'index'])->name('dashboard');
 
         Route::get('auth/totp/setup', [PortalTotpController::class, 'setupShow'])->name('auth.totp.setup.show');
@@ -115,10 +192,19 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::post('boletos', [PortalBoletoController::class, 'store'])->name('boletos.store');
         Route::get('boletos/{boleto}', [PortalBoletoController::class, 'show'])->name('boletos.show');
         Route::post('boletos/{boleto}/cancel', [PortalBoletoController::class, 'cancel'])->name('boletos.cancel');
+        Route::post('boletos/{boleto}/resend', [PortalBoletoController::class, 'resend'])->name('boletos.resend');
 
         // Perfil
         Route::get('profile', [PortalProfileController::class, 'show'])->name('profile');
         Route::put('profile/password', [PortalProfileController::class, 'updatePassword'])->name('profile.password');
+
+        // Usuários do tenant (apenas admin)
+        Route::get('users', [TenantUsersController::class, 'index'])->name('users.index');
+        Route::get('users/create', [TenantUsersController::class, 'create'])->name('users.create');
+        Route::post('users', [TenantUsersController::class, 'store'])->name('users.store');
+        Route::get('users/{tenantUser}', [TenantUsersController::class, 'show'])->name('users.show');
+        Route::patch('users/{tenantUser}/toggle-active', [TenantUsersController::class, 'toggleActive'])->name('users.toggle-active');
+        Route::post('users/{tenantUser}/resend-invite', [TenantUsersController::class, 'resendInvite'])->name('users.resend-invite');
 
         // Relatórios
         Route::get('reports', [PortalReportController::class, 'index'])->name('reports.index');

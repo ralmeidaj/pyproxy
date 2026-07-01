@@ -1,11 +1,23 @@
 <script setup>
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import PortalLayout from '@/Layouts/PortalLayout.vue'
+import { Line, Doughnut } from 'vue-chartjs'
+import {
+    Chart as ChartJS,
+    CategoryScale, LinearScale,
+    PointElement, LineElement,
+    ArcElement, Tooltip, Legend, Filler,
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler)
 
 const props = defineProps({
-    tenant:        Object,
-    user:          Object,
-    stats:         Object,
-    recentBoletos: Array,
+    tenant:          Object,
+    user:            Object,
+    stats:           Object,
+    recentBoletos:   Array,
+    chartSeries:     Array,
+    statusBreakdown: Object,
 })
 
 const STATUS_COLORS = {
@@ -15,36 +27,41 @@ const STATUS_COLORS = {
     expired:   'bg-gray-100 text-gray-500',
 }
 
+// ─── KPIs reativos (atualizam via WebSocket) ──────────────────────────────
+const boletosThisMonth = ref(props.stats?.boletos_this_month ?? 0)
+const boletosPaid      = ref(props.stats?.boletos_paid ?? 0)
+const boletosPending   = ref(props.stats?.boletos_pending ?? 0)
+const paidAmountCents  = ref(props.stats?.paid_amount_cents ?? 0)
+
 const kpiCards = [
-    {
-        label:   'Boletos no Mês',
-        value:   () => props.stats?.boletos_this_month ?? 0,
-        icon:    '📄',
-        color:   'from-[#2d5294] to-[#3a9fd8]',
-        iconBg:  'bg-blue-100 text-blue-600',
-    },
-    {
-        label:   'Pagos',
-        value:   () => props.stats?.boletos_paid ?? 0,
-        icon:    '✅',
-        color:   'from-emerald-500 to-emerald-400',
-        iconBg:  'bg-emerald-100 text-emerald-600',
-    },
-    {
-        label:   'Pendentes',
-        value:   () => props.stats?.boletos_pending ?? 0,
-        icon:    '⏳',
-        color:   'from-amber-500 to-amber-400',
-        iconBg:  'bg-amber-100 text-amber-600',
-    },
-    {
-        label:   'Total Arrecadado',
-        value:   () => formatCents(props.stats?.paid_amount_cents ?? 0),
-        icon:    '💰',
-        color:   'from-violet-500 to-violet-400',
-        iconBg:  'bg-violet-100 text-violet-600',
-    },
+    { label: 'Boletos no Mês',   value: () => boletosThisMonth.value,             icon: '📄', color: 'from-[#2d5294] to-[#3a9fd8]',  iconBg: 'bg-blue-100 text-blue-600' },
+    { label: 'Pagos',            value: () => boletosPaid.value,                   icon: '✅', color: 'from-emerald-500 to-emerald-400', iconBg: 'bg-emerald-100 text-emerald-600' },
+    { label: 'Pendentes',        value: () => boletosPending.value,                icon: '⏳', color: 'from-amber-500 to-amber-400',    iconBg: 'bg-amber-100 text-amber-600' },
+    { label: 'Total Arrecadado', value: () => formatCents(paidAmountCents.value),  icon: '💰', color: 'from-violet-500 to-violet-400',  iconBg: 'bg-violet-100 text-violet-600' },
 ]
+
+// ─── WebSocket — canal do tenant ──────────────────────────────────────────
+let channel = null
+
+onMounted(() => {
+    if (! window.Echo || ! props.tenant?.id) return
+    channel = window.Echo.private(`dashboard.${props.tenant.id}`)
+
+    channel.listen('.boleto.issued', (event) => {
+        boletosThisMonth.value++
+        boletosPending.value++
+    })
+
+    channel.listen('.boleto.paid', (event) => {
+        boletosPaid.value++
+        boletosPending.value = Math.max(0, boletosPending.value - 1)
+        paidAmountCents.value += event.paid_amount_cents ?? 0
+    })
+})
+
+onUnmounted(() => {
+    if (channel) window.Echo.leave(`dashboard.${props.tenant?.id}`)
+})
 
 function formatCents(cents) {
     return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -53,6 +70,74 @@ function formatCents(cents) {
 function formatDate(dateStr) {
     if (!dateStr) return '—'
     return new Date(dateStr).toLocaleDateString('pt-BR')
+}
+
+// ─── Gráfico de linha — emissões últimos 7 dias ───────────────────────────
+const lineData = computed(() => ({
+    labels: (props.chartSeries ?? []).map(r => {
+        const [, m, d] = r.period.split('-')
+        return `${d}/${m}`
+    }),
+    datasets: [
+        {
+            label: 'Emitidos',
+            data: (props.chartSeries ?? []).map(r => r.issued),
+            borderColor: '#3a9fd8',
+            backgroundColor: 'rgba(58,159,216,0.12)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+        },
+        {
+            label: 'Pagos',
+            data: (props.chartSeries ?? []).map(r => r.paid),
+            borderColor: '#10b981',
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+        },
+    ],
+}))
+
+const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 12 } } },
+        tooltip: { mode: 'index', intersect: false },
+    },
+    scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } },
+    },
+}
+
+// ─── Gráfico de rosca — status do mês ────────────────────────────────────
+const donutData = computed(() => ({
+    labels: ['Pendentes', 'Pagos', 'Cancelados', 'Expirados'],
+    datasets: [{
+        data: [
+            props.statusBreakdown?.pending   ?? 0,
+            props.statusBreakdown?.paid      ?? 0,
+            props.statusBreakdown?.cancelled ?? 0,
+            props.statusBreakdown?.expired   ?? 0,
+        ],
+        backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#9ca3af'],
+        borderWidth: 0,
+        hoverOffset: 6,
+    }],
+}))
+
+const donutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
+    },
+    cutout: '65%',
 }
 </script>
 
@@ -71,20 +156,39 @@ function formatDate(dateStr) {
         </div>
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div v-for="card in kpiCards" :key="card.label"
                 class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="h-1 w-full bg-gradient-to-r" :class="card.color" />
                 <div class="p-5">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</span>
-                        <div :class="['text-lg w-8 h-8 flex items-center justify-center rounded-lg', card.iconBg]">
-                            {{ card.icon }}
-                        </div>
+                        <div :class="['text-lg w-8 h-8 flex items-center justify-center rounded-lg', card.iconBg]">{{ card.icon }}</div>
                     </div>
                     <p class="text-2xl font-bold text-[#2d5294]">{{ card.value() }}</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+            <!-- Linha — emissões 7 dias -->
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <h2 class="text-sm font-semibold text-[#2d5294] mb-4">Emissões — últimos 7 dias</h2>
+                <div class="h-52">
+                    <Line :data="lineData" :options="lineOptions" />
+                </div>
+            </div>
+
+            <!-- Rosca — status do mês -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <h2 class="text-sm font-semibold text-[#2d5294] mb-4">Status do mês</h2>
+                <div class="h-52">
+                    <Doughnut :data="donutData" :options="donutOptions" />
+                </div>
+            </div>
+
         </div>
 
         <!-- Últimos boletos + ações -->
@@ -94,8 +198,7 @@ function formatDate(dateStr) {
             <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h2 class="font-semibold text-[#2d5294] text-sm">Últimos Boletos</h2>
-                    <a :href="route('portal.boletos.index')"
-                        class="text-xs text-[#3a9fd8] hover:underline">Ver todos →</a>
+                    <a :href="route('portal.boletos.index')" class="text-xs text-[#3a9fd8] hover:underline">Ver todos →</a>
                 </div>
 
                 <div v-if="recentBoletos.length === 0" class="py-12 text-center">
@@ -105,8 +208,7 @@ function formatDate(dateStr) {
 
                 <table v-else class="w-full text-sm">
                     <tbody class="divide-y divide-gray-50">
-                        <tr v-for="b in recentBoletos" :key="b.id"
-                            class="hover:bg-gray-50 transition-colors">
+                        <tr v-for="b in recentBoletos" :key="b.id" class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-3">
                                 <p class="font-medium text-gray-800 truncate max-w-[180px]">{{ b.payer_name }}</p>
                                 <p class="text-xs text-gray-400 font-mono">{{ b.external_ref }}</p>
@@ -123,8 +225,7 @@ function formatDate(dateStr) {
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <a :href="route('portal.boletos.show', b.id)"
-                                    class="text-xs text-[#3a9fd8] hover:underline">Ver →</a>
+                                <a :href="route('portal.boletos.show', b.id)" class="text-xs text-[#3a9fd8] hover:underline">Ver →</a>
                             </td>
                         </tr>
                     </tbody>
@@ -137,7 +238,7 @@ function formatDate(dateStr) {
                     <h2 class="font-semibold text-[#2d5294] text-sm mb-4">Ações Rápidas</h2>
                     <div class="space-y-3">
                         <a :href="route('portal.boletos.create')"
-                            class="flex items-center gap-3 p-3.5 bg-[#2d5294] text-white rounded-xl hover:bg-[#2d6abf] transition-colors group">
+                            class="flex items-center gap-3 p-3.5 bg-[#2d5294] text-white rounded-xl hover:bg-[#2d6abf] transition-colors">
                             <span class="text-xl">📄</span>
                             <span class="text-sm font-medium">Emitir Boleto</span>
                         </a>
@@ -154,6 +255,7 @@ function formatDate(dateStr) {
                     </div>
                 </div>
             </div>
+
         </div>
 
     </PortalLayout>

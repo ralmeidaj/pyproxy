@@ -40,4 +40,27 @@ final readonly class IssueBoletoData
             metadata: $request->metadata,
         );
     }
+
+    public static function fromArray(array $item): self
+    {
+        return new self(
+            externalRef:   $item['pedido_numero'],
+            amountCents:   (int) round((float) $item['valor'] * 100),
+            dueDate:       \Carbon\Carbon::createFromFormat('m/d/Y', $item['vencimento'])->toDateString(),
+            payerName:     $item['nome_cliente'],
+            payerDocument: $item['cpf_cliente'],
+            payerEmail:    $item['email_cliente'] ?? null,
+            payerPhone:    $item['telefone_cliente'] ?? null,
+            payerAddress:  [
+                'logradouro'  => $item['endereco_cliente'],
+                'numero'      => $item['numero_cliente'],
+                'complemento' => $item['complemento_cliente'] ?? '',
+                'bairro'      => $item['bairro_cliente'],
+                'cidade'      => $item['cidade_cliente'],
+                'estado'      => $item['estado_cliente'],
+                'cep'         => $item['cep_cliente'],
+            ],
+            metadata: $item['metadata'] ?? [],
+        );
+    }
 }

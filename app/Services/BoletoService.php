@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTOs\IssueBoletoData;
 use App\Enums\BoletoStatus;
+use App\Events\BoletoIssued;
 use App\Exceptions\BoletoCannotBeCancelledException;
 use App\Exceptions\BoletoConfigNotFoundException;
 use App\Exceptions\BankPartnerException;
@@ -112,6 +113,8 @@ class BoletoService
 
             return $boleto;
         });
+
+        BoletoIssued::dispatch($tenant->id, $boleto->amount_cents, $boleto->payer_name, $boleto->external_ref);
 
         return $boleto;
     }

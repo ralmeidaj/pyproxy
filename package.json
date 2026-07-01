@@ -17,6 +17,10 @@
     "dependencies": {
         "@inertiajs/vue3": "^3.4.0",
         "@vitejs/plugin-vue": "^6.0.7",
-        "vue": "^3.5.38"
+        "chart.js": "^4.5.1",
+        "laravel-echo": "^2.3.7",
+        "pusher-js": "^8.5.0",
+        "vue": "^3.5.38",
+        "vue-chartjs": "^5.3.3"
     }
 }

@@ -3,10 +3,12 @@
 namespace App\Http\Middleware;
 
 use App\Enums\TenantStatus;
+use App\Jobs\AlertMonthlyLimitJob;
 use App\Models\ApiKeyUsageDaily;
 use App\Services\ApiKeyService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,9 +33,7 @@ class ApiKeyMiddleware
         $tenant = $apiKey->tenant;
 
         if ($tenant->status !== TenantStatus::Active) {
-            return response()->json([
-                'message' => 'Acesso negado. A aplicação está ' . $tenant->status->label() . '.',
-            ], 403);
+            return response()->json(['message' => 'Acesso negado.'], 403);
         }
 
         // Scope check
@@ -67,11 +67,40 @@ class ApiKeyMiddleware
 
         $usage->increment('count');
 
+        // RF-AC-19: Alerta de 80% do limite mensal
+        $this->checkMonthlyLimitAlert($apiKey);
+
         // Bind to request for downstream use
         $request->attributes->set('api_key', $apiKey);
         $request->attributes->set('tenant', $tenant);
 
         return $next($request);
+    }
+
+    private function checkMonthlyLimitAlert(\App\Models\ApiKey $apiKey): void
+    {
+        if (! $apiKey->monthly_limit) {
+            return;
+        }
+
+        $now       = now();
+        $cacheKey  = "alert_80pct:api_key:{$apiKey->id}:{$now->format('Y-m')}";
+
+        if (Cache::has($cacheKey)) {
+            return;
+        }
+
+        $monthlyTotal = ApiKeyUsageDaily::where('api_key_id', $apiKey->id)
+            ->whereYear('date', $now->year)
+            ->whereMonth('date', $now->month)
+            ->sum('count');
+
+        $threshold = (int) round($apiKey->monthly_limit * 0.8);
+
+        if ($monthlyTotal >= $threshold) {
+            Cache::put($cacheKey, true, $now->endOfMonth());
+            AlertMonthlyLimitJob::dispatch($apiKey->id, $monthlyTotal);
+        }
     }
 
     private function unauthorized(string $message): Response

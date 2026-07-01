@@ -100,6 +100,36 @@ exatos configurados internamente.
 
 ---
 
+#### 1.1.4 Política de Senhas
+
+**RF-AC-20** Toda senha de usuário — tanto de operadores do backoffice (`BackofficeUser`) quanto de
+usuários de tenant (`TenantUser`) — deve atender **obrigatoriamente** aos seguintes critérios de
+complexidade no momento de criação ou alteração:
+
+- Mínimo de **10 caracteres**
+- Ao menos **uma letra maiúscula** (A–Z)
+- Ao menos **uma letra minúscula** (a–z)
+- Ao menos **um número** (0–9)
+- Ao menos **um símbolo** (ex.: `!@#$%^&*()_+-=[]{}|;':",.<>?/`)
+
+A violação de qualquer critério deve ser rejeitada com mensagem descritiva indicando o requisito
+não atendido. A validação deve ocorrer tanto no backend (Form Request) quanto com feedback visual
+em tempo real no frontend.
+
+**RF-AC-21** O sistema deve aplicar **controle de vencimento de senha** com as seguintes regras:
+
+- Toda senha expira após **90 dias** a partir da data de última troca (`password_changed_at`).
+- No primeiro login após o vencimento, o usuário é **redirecionado obrigatoriamente** para a tela
+  de troca de senha antes de acessar qualquer funcionalidade — a sessão permanece bloqueada até
+  a conclusão da troca.
+- Usuários sem `password_changed_at` registrado (primeiro acesso após convite) são tratados como
+  senha expirada e devem trocar na primeira autenticação.
+- A nova senha não pode ser idêntica à senha atual.
+- Após a troca bem-sucedida, `password_changed_at` é atualizado e o acesso é liberado
+  normalmente.
+
+---
+
 ### 1.2 Gestão de Tenants (Aplicações Consumidoras)
 
 **RF-01** O sistema deve permitir o cadastro de tenants, representando cada aplicação ou sistema

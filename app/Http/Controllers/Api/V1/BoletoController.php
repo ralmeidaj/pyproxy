@@ -6,6 +6,8 @@ use App\DTOs\IssueBoletoData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IssueBoletoRequest;
 use App\Http\Resources\BoletoResource;
+use App\Models\ApiKey;
+use App\Models\ApiKeyUsageDaily;
 use App\Models\Boleto;
 use App\Services\BoletoService;
 use Illuminate\Http\JsonResponse;
@@ -68,12 +70,42 @@ class BoletoController extends Controller
             abort(403, 'Esta API key não possui escopo boleto:write.');
         }
 
-        $boleto = $this->boletoService->issue(
-            $tenant,
-            IssueBoletoData::fromRequest($request),
-        );
+        $data = IssueBoletoData::fromRequest($request);
+
+        $this->enforceApiKeyLimits($apiKey, $data);
+
+        $boleto = $this->boletoService->issue($tenant, $data);
 
         return new BoletoResource($boleto->load('splits'));
+    }
+
+    private function enforceApiKeyLimits(ApiKey $apiKey, IssueBoletoData $data): void
+    {
+        // RF-AC-15: Limite de valor por boleto
+        if ($apiKey->max_amount_cents && $data->amountCents > $apiKey->max_amount_cents) {
+            $max = 'R$ ' . number_format($apiKey->max_amount_cents / 100, 2, ',', '.');
+            abort(422, "Valor do boleto supera o limite máximo desta API key ({$max}).");
+        }
+
+        // RF-AC-18: Limite mensal de operações (soma dos registros diários do mês corrente)
+        if ($apiKey->monthly_limit) {
+            $monthlyCount = ApiKeyUsageDaily::where('api_key_id', $apiKey->id)
+                ->whereYear('date', now()->year)
+                ->whereMonth('date', now()->month)
+                ->sum('count');
+
+            if ($monthlyCount >= $apiKey->monthly_limit) {
+                abort(429, 'Limite mensal de operações atingido para esta API key.');
+            }
+        }
+
+        // RF-AC-15: Tipos de metadados permitidos
+        if (! empty($apiKey->allowed_metadata_types) && ! empty($data->metadata)) {
+            $disallowed = array_diff(array_keys($data->metadata), $apiKey->allowed_metadata_types);
+            if (! empty($disallowed)) {
+                abort(422, 'Chaves de metadados não permitidas por esta API key: ' . implode(', ', $disallowed) . '.');
+            }
+        }
     }
 
     #[OA\Get(

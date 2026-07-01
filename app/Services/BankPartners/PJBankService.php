@@ -62,10 +62,9 @@ class PJBankService implements BankPartnerInterface
             }, $splits));
         }
 
-        $response = Http::withHeaders([
-            'x-chave'      => $chave,
-            'Content-Type' => 'application/json',
-        ])->post("{$config->bankPartner->base_url}/recebimentos/{$credencial}/transacoes", $payload);
+        $response = Http::withHeaders(['x-chave' => $chave])
+            ->asJson()
+            ->post("{$config->bankPartner->base_url}/recebimentos/{$credencial}/transacoes", $payload);
 
         if ($response->failed()) {
             throw new BankPartnerException(

@@ -108,4 +108,23 @@ class TenantController extends Controller
 
         return back()->with('success', 'Status atualizado com sucesso.');
     }
+
+    public function approve(Request $request, Tenant $tenant): RedirectResponse
+    {
+        if ($tenant->status !== TenantStatus::PendingApproval) {
+            return back()->with('error', 'Tenant não está pendente de aprovação.');
+        }
+
+        $actor = Auth::guard('backoffice')->user();
+
+        $this->tenantService->updateStatus($tenant, new UpdateTenantStatusData(
+            newStatus: TenantStatus::Active,
+            reason:    'Aprovado via backoffice.',
+            actor:     $actor,
+            ip:        $request->ip(),
+        ));
+
+        return redirect()->route('backoffice.tenants.show', $tenant)
+            ->with('success', "Tenant \"{$tenant->name}\" aprovado com sucesso.");
+    }
 }

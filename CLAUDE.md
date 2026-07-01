@@ -12,6 +12,8 @@
 
 **Layout full-width.** Todas as telas devem ocupar toda a largura disponível da tela. O `<main>` do layout não deve ter `max-w-*`. Usar apenas padding lateral (`px-6` ou similar) sem container centralizado.
 
+**Swagger obrigatório em toda rota da API.** Qualquer rota nova ou modificada em `app/Http/Controllers/Api/V1/` deve ter os atributos `#[OA\...]` adicionados/atualizados no mesmo entregável. Após a alteração, executar obrigatoriamente `docker exec payproxy-app php artisan l5-swagger:generate` antes de declarar a tarefa concluída.
+
 ---
 
 ## Contexto do projeto

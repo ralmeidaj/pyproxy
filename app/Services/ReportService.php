@@ -8,6 +8,7 @@ use App\Models\ReportExport;
 use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
@@ -39,6 +40,90 @@ class ReportService
             'liquidation_rate'    => $total > 0 ? round($paid / $total * 100, 2) : 0,
             'avg_ticket_cents'    => $total > 0 ? (int) round($amountIssued / $total) : 0,
         ];
+    }
+
+    // ─── RF-45: Série temporal (diário / semanal / mensal) ───────────────────
+
+    public function timeSeries(?Tenant $tenant, string $from, string $to, string $granularity = 'daily'): array
+    {
+        // Expressão de agrupamento compatível com SQLite (testes) e PostgreSQL (produção)
+        if (DB::getDriverName() === 'sqlite') {
+            $dateExpr = match($granularity) {
+                'weekly'  => "strftime('%Y-%W', created_at)",
+                'monthly' => "strftime('%Y-%m', created_at)",
+                default   => "strftime('%Y-%m-%d', created_at)",
+            };
+        } else {
+            $trunc    = match($granularity) {
+                'weekly'  => 'week',
+                'monthly' => 'month',
+                default   => 'day',
+            };
+            $dateExpr = "TO_CHAR(DATE_TRUNC('{$trunc}', created_at), 'YYYY-MM-DD')";
+        }
+
+        return $this->baseQuery($tenant)
+            ->whereBetween('created_at', [
+                Carbon::parse($from)->startOfDay(),
+                Carbon::parse($to)->endOfDay(),
+            ])
+            ->selectRaw("
+                {$dateExpr} as period,
+                COUNT(*) as issued,
+                SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid,
+                SUM(amount_cents) as amount_issued_cents,
+                SUM(CASE WHEN status = 'paid' THEN paid_amount_cents ELSE 0 END) as amount_paid_cents
+            ")
+            ->groupByRaw($dateExpr)
+            ->orderByRaw($dateExpr)
+            ->get()
+            ->map(fn ($r) => [
+                'period'              => $r->period,
+                'issued'              => (int) $r->issued,
+                'paid'                => (int) $r->paid,
+                'amount_issued_cents' => (int) $r->amount_issued_cents,
+                'amount_paid_cents'   => (int) $r->amount_paid_cents,
+            ])
+            ->toArray();
+    }
+
+    // ─── RF-47: Por metadados ────────────────────────────────────────────────
+
+    public function byMetadata(?Tenant $tenant, string $from, string $to, string $metadataKey): array
+    {
+        // Sanitiza a chave para evitar SQL injection (apenas chars seguros)
+        $safeKey = preg_replace('/[^a-zA-Z0-9_\-]/', '', $metadataKey);
+
+        if (DB::getDriverName() === 'sqlite') {
+            $jsonExpr = "json_extract(metadata, '$.{$safeKey}')";
+        } else {
+            $jsonExpr = "metadata->>'$safeKey'";
+        }
+
+        return $this->baseQuery($tenant)
+            ->whereBetween('created_at', [
+                Carbon::parse($from)->startOfDay(),
+                Carbon::parse($to)->endOfDay(),
+            ])
+            ->whereRaw("{$jsonExpr} IS NOT NULL")
+            ->selectRaw("
+                {$jsonExpr} as metadata_value,
+                COUNT(*) as count,
+                SUM(amount_cents) as amount_cents,
+                SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN status = 'paid' THEN paid_amount_cents ELSE 0 END) as paid_amount_cents
+            ")
+            ->groupByRaw($jsonExpr)
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($r) => [
+                'value'             => $r->metadata_value,
+                'count'             => (int) $r->count,
+                'paid_count'        => (int) $r->paid_count,
+                'amount_cents'      => (int) $r->amount_cents,
+                'paid_amount_cents' => (int) $r->paid_amount_cents,
+            ])
+            ->toArray();
     }
 
     // ─── RF-46: Por canal de pagamento ───────────────────────────────────────

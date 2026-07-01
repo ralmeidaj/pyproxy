@@ -24,6 +24,7 @@ class BackofficeUser extends Authenticatable
         'totp_confirmed_at',
         'last_login_at',
         'last_login_ip',
+        'password_changed_at',
     ];
 
     protected $hidden = [
@@ -35,10 +36,11 @@ class BackofficeUser extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'          => 'hashed',
-            'totp_enabled'      => 'boolean',
-            'totp_confirmed_at' => 'datetime',
-            'last_login_at'     => 'datetime',
+            'password'            => 'hashed',
+            'totp_enabled'        => 'boolean',
+            'totp_confirmed_at'   => 'datetime',
+            'last_login_at'       => 'datetime',
+            'password_changed_at' => 'datetime',
         ];
     }
 

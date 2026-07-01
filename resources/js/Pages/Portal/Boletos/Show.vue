@@ -37,6 +37,12 @@ function cancelBoleto() {
         router.post(route('portal.boletos.cancel', props.boleto.id))
     }
 }
+
+function resendNotification() {
+    if (confirm('Reenviar e-mail de notificação para o pagador?')) {
+        router.post(route('portal.boletos.resend', props.boleto.id))
+    }
+}
 </script>
 
 <template>
@@ -62,6 +68,10 @@ function cancelBoleto() {
                     class="px-4 py-2 text-sm bg-[#2d5294] text-white rounded-xl hover:bg-[#2d6abf] transition-colors">
                     📄 PDF
                 </a>
+                <button v-if="boleto.can_resend" @click="resendNotification"
+                    class="px-4 py-2 text-sm bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors">
+                    Reenviar Notificação
+                </button>
                 <button v-if="boleto.can_cancel" @click="cancelBoleto"
                     class="px-4 py-2 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors">
                     Cancelar

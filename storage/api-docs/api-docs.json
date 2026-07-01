@@ -16,6 +16,97 @@
         }
     ],
     "paths": {
+        "/boletos/batch": {
+            "post": {
+                "tags": [
+                    "Boletos"
+                ],
+                "summary": "Emitir lote de boletos",
+                "description": "Cria um lote de até 500 boletos. O processamento é assíncrono: retorna HTTP 202 com o ID do lote para consulta posterior. A operação é idempotente por `external_ref` por tenant.",
+                "operationId": "9bb1004f9d2cae05c79da89d1f13be89",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "external_ref",
+                                    "boletos"
+                                ],
+                                "properties": {
+                                    "external_ref": {
+                                        "description": "Referência única do lote por tenant",
+                                        "type": "string",
+                                        "example": "LOTE-IPTU-2026-07"
+                                    },
+                                    "boletos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "maxItems": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Lote aceito para processamento"
+                    },
+                    "401": {
+                        "description": "API Key inválida ou ausente"
+                    },
+                    "409": {
+                        "description": "external_ref já existe para este tenant"
+                    },
+                    "422": {
+                        "description": "Dados inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ]
+            }
+        },
+        "/boletos/batch/{batch_id}": {
+            "get": {
+                "tags": [
+                    "Boletos"
+                ],
+                "summary": "Consultar status do lote",
+                "description": "Retorna o status de processamento do lote e os resultados individuais de cada boleto.",
+                "operationId": "0dfe1850823df86e708a841b519004fa",
+                "parameters": [
+                    {
+                        "name": "batch_id",
+                        "in": "path",
+                        "description": "ID do lote",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status do lote"
+                    },
+                    "404": {
+                        "description": "Lote não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ]
+            }
+        },
         "/boletos": {
             "post": {
                 "tags": [
@@ -254,6 +345,74 @@
                     }
                 ]
             }
+        },
+        "/webhooks/pjbank": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Webhook de pagamento PJBank",
+                "description": "Endpoint chamado pelo PJBank para notificar pagamentos. Não é chamado pelos tenants. A autenticidade é validada via HMAC-SHA256 (header `X-PJBank-Hmac-Sha256`) e pela credencial do boleto. Retorna 200 mesmo em cenários de idempotência para evitar retentativas do PJBank.",
+                "operationId": "697cc741e2e222b9c02f4e5107656ecd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nosso_numero": {
+                                        "description": "Identificador do boleto no PJBank",
+                                        "type": "string",
+                                        "example": "99999999"
+                                    },
+                                    "token_transaction": {
+                                        "description": "Token alternativo de identificação",
+                                        "type": "string",
+                                        "example": "tok_abc123"
+                                    },
+                                    "credencial": {
+                                        "description": "Credencial do tenant no PJBank (validada fail-closed)",
+                                        "type": "string",
+                                        "example": "cred_xxxxx"
+                                    },
+                                    "valor": {
+                                        "description": "Valor pago em reais",
+                                        "type": "number",
+                                        "example": 150
+                                    },
+                                    "forma_pagamento": {
+                                        "description": "Canal de pagamento: barcode, pix, ted, etc.",
+                                        "type": "string",
+                                        "example": "pix"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Notificação processada (ou ignorada por idempotência)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Assinatura HMAC inválida ou credencial incorreta/ausente"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -374,6 +533,10 @@
         {
             "name": "Boletos",
             "description": "Emissão, consulta e cancelamento de boletos"
+        },
+        {
+            "name": "Webhooks",
+            "description": "Webhooks"
         }
     ]
 }
