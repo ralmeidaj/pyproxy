@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Backoffice\ApiKeyController;
+use App\Http\Controllers\Backoffice\AuditLogController;
 use App\Http\Controllers\Backoffice\Auth\ChangePasswordController as BackofficeChangePasswordController;
 use App\Http\Controllers\Backoffice\Auth\LoginController;
 use App\Http\Controllers\Backoffice\Auth\TotpController;
@@ -125,6 +126,10 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
             ->name('tenants.api-keys.create');
         Route::post('tenants/{tenant}/api-keys', [ApiKeyController::class, 'store'])
             ->name('tenants.api-keys.store');
+        Route::get('tenants/{tenant}/api-keys/{apiKey}/edit', [ApiKeyController::class, 'edit'])
+            ->name('tenants.api-keys.edit');
+        Route::put('tenants/{tenant}/api-keys/{apiKey}', [ApiKeyController::class, 'update'])
+            ->name('tenants.api-keys.update');
         Route::delete('tenants/{tenant}/api-keys/{apiKey}', [ApiKeyController::class, 'revoke'])
             ->name('tenants.api-keys.revoke');
 
@@ -152,6 +157,8 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });
 });
 

@@ -72,7 +72,7 @@ class TenantController extends Controller
     public function edit(Tenant $tenant): Response
     {
         return Inertia::render('Backoffice/Tenants/Edit', [
-            'tenant' => $tenant->only('id', 'name', 'document', 'email', 'phone', 'communication_model', 'notes'),
+            'tenant' => $tenant->only('id', 'name', 'document', 'email', 'phone', 'communication_model', 'notes', 'email_entity_name', 'email_logo_url', 'email_custom_text'),
         ]);
     }
 
@@ -91,6 +91,9 @@ class TenantController extends Controller
             'phone'               => $request->phone,
             'communication_model' => $request->communication_model,
             'notes'               => $request->notes,
+            'email_entity_name'   => $request->email_entity_name ?: null,
+            'email_logo_url'      => $request->email_logo_url ?: null,
+            'email_custom_text'   => $request->email_custom_text ?: null,
         ]);
 
         return redirect()->route('backoffice.tenants.show', $tenant)

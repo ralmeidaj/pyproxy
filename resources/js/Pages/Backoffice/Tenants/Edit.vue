@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { useForm } from '@inertiajs/vue3'
 import BackofficeLayout from '@/Layouts/BackofficeLayout.vue'
 
@@ -11,6 +11,9 @@ const form = useForm({
     phone:               props.tenant.phone ?? '',
     communication_model: props.tenant.communication_model,
     notes:               props.tenant.notes ?? '',
+    email_entity_name:   props.tenant.email_entity_name ?? '',
+    email_logo_url:      props.tenant.email_logo_url ?? '',
+    email_custom_text:   props.tenant.email_custom_text ?? '',
 })
 
 function submit() {
@@ -90,6 +93,54 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Observações</label>
                         <textarea v-model="form.notes" rows="3"
                             class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors resize-none" />
+                    </div>
+                </div>
+
+                <!-- Template de E-mail (RF-MSG-04) -->
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                    <div>
+                        <h2 class="text-xs font-semibold text-[#2d7ab5] uppercase tracking-wider">Template de E-mail</h2>
+                        <p class="text-xs text-gray-400 mt-1">
+                            Personalize o cabeçalho e rodapé dos e-mails enviados aos pagadores deste tenant.
+                            Deixe em branco para usar o padrão da plataforma.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nome do remetente / entidade</label>
+                        <input v-model="form.email_entity_name" type="text"
+                            placeholder="Ex: Prefeitura de Salvador — SEFAZ"
+                            maxlength="150"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors"
+                            :class="form.errors.email_entity_name ? 'border-red-300 bg-red-50' : ''" />
+                        <p class="mt-1 text-xs text-gray-400">Aparece no cabeçalho e rodapé do e-mail (máx. 150 caracteres).</p>
+                        <p v-if="form.errors.email_entity_name" class="mt-1 text-xs text-red-500">{{ form.errors.email_entity_name }}</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">URL do logo</label>
+                        <input v-model="form.email_logo_url" type="url"
+                            placeholder="https://example.com/logo.png"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors"
+                            :class="form.errors.email_logo_url ? 'border-red-300 bg-red-50' : ''" />
+                        <p class="mt-1 text-xs text-gray-400">Imagem exibida no cabeçalho no lugar do nome. Deve ser HTTPS e acessível publicamente.</p>
+                        <p v-if="form.errors.email_logo_url" class="mt-1 text-xs text-red-500">{{ form.errors.email_logo_url }}</p>
+
+                        <!-- Preview do logo -->
+                        <div v-if="form.email_logo_url" class="mt-3 inline-flex items-center gap-3 bg-[#2d5294] rounded-xl px-4 py-3">
+                            <img :src="form.email_logo_url" alt="Preview" class="h-10 max-w-[160px] object-contain" />
+                            <span class="text-xs text-white/50">preview</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Texto complementar no rodapé</label>
+                        <textarea v-model="form.email_custom_text" rows="3" maxlength="1000"
+                            placeholder="Ex: Em caso de dúvidas, entre em contato com a Secretaria da Fazenda pelo telefone (71) 3202-0000."
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors resize-none"
+                            :class="form.errors.email_custom_text ? 'border-red-300 bg-red-50' : ''" />
+                        <p class="mt-1 text-xs text-gray-400">Aparece após o conteúdo principal do e-mail (máx. 1.000 caracteres).</p>
+                        <p v-if="form.errors.email_custom_text" class="mt-1 text-xs text-red-500">{{ form.errors.email_custom_text }}</p>
                     </div>
                 </div>
 

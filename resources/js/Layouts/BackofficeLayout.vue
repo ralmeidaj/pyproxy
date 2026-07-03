@@ -13,9 +13,10 @@ function logout() { logoutForm.post(route('backoffice.auth.logout')) }
 const sidebarOpen = ref(false)
 
 const navItems = [
-    { label: 'Dashboard',  route: 'backoffice.dashboard',      icon: '📊' },
-    { label: 'Tenants',    route: 'backoffice.tenants.index',  icon: '🏢' },
-    { label: 'Relatórios', route: 'backoffice.reports.index',  icon: '📈' },
+    { label: 'Dashboard',  route: 'backoffice.dashboard',          icon: '📊' },
+    { label: 'Tenants',    route: 'backoffice.tenants.index',      icon: '🏢' },
+    { label: 'Relatórios', route: 'backoffice.reports.index',      icon: '📈' },
+    { label: 'Auditoria',  route: 'backoffice.audit-logs.index',   icon: '🔍' },
 ]
 
 function isActive(routeName) {

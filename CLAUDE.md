@@ -14,6 +14,12 @@
 
 **Swagger obrigatório em toda rota da API.** Qualquer rota nova ou modificada em `app/Http/Controllers/Api/V1/` deve ter os atributos `#[OA\...]` adicionados/atualizados no mesmo entregável. Após a alteração, executar obrigatoriamente `docker exec payproxy-app php artisan l5-swagger:generate` antes de declarar a tarefa concluída.
 
+**Build obrigatório após mudança de Vue/JS.** O Vite HMR não está ativo neste projeto (Docker + Windows). Qualquer alteração em arquivo `.vue` ou JS em `resources/js/` exige executar imediatamente:
+```
+cd "c:\Users\raimundo.araujo\Documents\Projetos\payproxy" && npm run build
+```
+Avisar o usuário para fazer **Ctrl+Shift+R** após o build. Nunca declarar tarefa frontend concluída sem ter rodado o build.
+
 ---
 
 ## Contexto do projeto

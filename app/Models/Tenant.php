@@ -20,6 +20,9 @@ class Tenant extends Model
         'status',
         'communication_model',
         'notes',
+        'email_entity_name',
+        'email_logo_url',
+        'email_custom_text',
     ];
 
     protected function casts(): array
