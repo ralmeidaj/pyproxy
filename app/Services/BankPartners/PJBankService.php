@@ -21,12 +21,12 @@ class PJBankService implements BankPartnerInterface
         $payload = [
             'vencimento'          => \Carbon\Carbon::parse($data->dueDate)->format('m/d/Y'),
             'valor'               => number_format($data->amountCents / 100, 2, '.', ''),
-            'juros'               => $config->juros_percentual_mes,
-            'multa'               => $config->multa_percentual,
-            'desconto'            => $config->desconto_percentual ?? 0,
+            'juros'               => (float) $config->juros_percentual_mes,
+            'multa'               => (float) $config->multa_percentual,
+            'desconto'            => (float) ($config->desconto_percentual ?? 0),
             'pedido_numero'       => $data->externalRef,
             'nome_cliente'        => $data->payerName,
-            'cpf_cliente'         => $data->payerDocument,
+            'cpf_cliente'         => preg_replace('/\D/', '', $data->payerDocument),
             'email_cliente'       => $data->payerEmail ?? '',
             'endereco_cliente'    => $data->payerAddress['logradouro'] ?? '',
             'numero_cliente'      => $data->payerAddress['numero'] ?? '',
@@ -34,15 +34,17 @@ class PJBankService implements BankPartnerInterface
             'bairro_cliente'      => $data->payerAddress['bairro'] ?? '',
             'cidade_cliente'      => $data->payerAddress['cidade'] ?? '',
             'estado_cliente'      => $data->payerAddress['estado'] ?? '',
-            'cep_cliente'         => $data->payerAddress['cep'] ?? '',
-            'pix'                 => $hasSplit ? 'pix' : 'pix-e-boleto',
+            'cep_cliente'         => preg_replace('/\D/', '', $data->payerAddress['cep'] ?? ''),
+            'pix'                 => 'pix-e-boleto',
             'instrucao_1'         => $config->instrucoes[0] ?? '',
             'instrucao_2'         => $config->instrucoes[1] ?? '',
+            'instrucao_adicional' => $config->instrucoes[2] ?? '',
             'grupo'               => 'Boletos',
         ];
 
-        if (! empty($config->webhook_url)) {
-            $payload['webhook'] = $config->webhook_url;
+        $pjbankWebhookUrl = config('services.pjbank.webhook_url');
+        if (! empty($pjbankWebhookUrl)) {
+            $payload['webhook'] = $pjbankWebhookUrl;
         }
 
         // Monta split de pagamento (RF-10 a RF-12)
@@ -52,7 +54,7 @@ class PJBankService implements BankPartnerInterface
 
                 return [
                     'nome'                 => $details['nome'] ?? $split['name'],
-                    'cnpj'                 => $details['cnpj'] ?? '',
+                    'cnpj'                 => preg_replace('/\D/', '', $details['cnpj'] ?? ''),
                     'banco_repasse'        => $details['banco_repasse'] ?? '',
                     'agencia_repasse'      => $details['agencia_repasse'] ?? '',
                     'conta_repasse'        => $details['conta_repasse'] ?? '',
@@ -116,6 +118,23 @@ class PJBankService implements BankPartnerInterface
             );
         }
 
-        return $response->json();
+        // PJBank retorna array — pega o primeiro elemento
+        $body = $response->json();
+        $data = is_array($body) && isset($body[0]) ? $body[0] : $body;
+
+        // Normaliza para o campo 'status' esperado pela ReconciliationService
+        $valorPago     = $data['valor_pago'] ?? '';
+        $dataPagamento = $data['data_pagamento'] ?? '';
+
+        if (! empty($valorPago) && $valorPago !== '0' && ! empty($dataPagamento)) {
+            $data['status']           = 'pago';
+            $data['forma_pagamento']  = $data['forma_liquidacao'] ?? 'unknown';
+        } elseif (in_array(strtolower($data['registro_sistema_bancario'] ?? ''), ['cancelado', 'cancelled'])) {
+            $data['status'] = 'cancelado';
+        } else {
+            $data['status'] = 'pendente';
+        }
+
+        return $data;
     }
 }

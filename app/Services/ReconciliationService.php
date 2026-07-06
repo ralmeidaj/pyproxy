@@ -29,10 +29,7 @@ class ReconciliationService
 
         Boleto::with(['boletoConfig.bankPartner'])
             ->where('status', BoletoStatus::Pending->value)
-            ->whereBetween('due_date', [
-                now()->subDays($windowDays)->toDateString(),
-                now()->toDateString(),
-            ])
+            ->where('due_date', '>=', now()->subDays($windowDays)->toDateString())
             ->chunkById($batchSize, function (Collection $boletos) use (&$stats): void {
                 foreach ($boletos as $boleto) {
                     $this->reconcileBoleto($boleto, $stats);

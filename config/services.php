@@ -37,6 +37,7 @@ return [
 
     'pjbank' => [
         'webhook_secret' => env('PJBANK_WEBHOOK_SECRET'),
+        'webhook_url'    => env('PJBANK_WEBHOOK_URL'),
     ],
 
 ];
