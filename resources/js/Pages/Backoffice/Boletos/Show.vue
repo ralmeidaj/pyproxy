@@ -5,6 +5,7 @@ const props = defineProps({
     tenant:            Object,
     boleto:            Object,
     notificationLogs:  Array,
+    arNotifications:   Array,
 })
 
 const STATUS_COLORS = {
@@ -24,6 +25,40 @@ const NOTIF_STATUS_LABELS = {
     queued: 'Na fila',
     sent:   'Enviado',
     failed: 'Falhou',
+}
+
+const AR_STATUS_COLORS = {
+    enviado:    'bg-yellow-100 text-yellow-700',
+    entregue:   'bg-blue-100 text-blue-700',
+    lido:       'bg-indigo-100 text-indigo-700',
+    confirmado: 'bg-emerald-100 text-emerald-700',
+    bounce:     'bg-red-100 text-red-600',
+}
+
+const AR_STATUS_LABELS = {
+    enviado:    'Enviado',
+    entregue:   'Entregue',
+    lido:       'Lido',
+    confirmado: 'Confirmado',
+    bounce:     'Bounce',
+}
+
+const AR_EVENT_LABELS = {
+    envio:              'Envio',
+    leitura_pixel:      'Leitura (pixel)',
+    leitura_email:      'Abertura e-mail',
+    acesso_link:        'Acesso ao link',
+    confirmado:         'Confirmação de recebimento',
+    entrega_provedor:   'Entrega (provedor)',
+    bounce:             'Bounce',
+    envio_whatsapp:     'Envio WhatsApp',
+}
+
+const AR_CANAL_ICONS = {
+    email:    '✉️',
+    whatsapp: '💬',
+    web:      '🌐',
+    smtp_dsn: '📬',
 }
 
 const NOTIF_EVENT_LABELS = {
@@ -278,6 +313,79 @@ function copyText(text) {
                         </div>
                     </div>
                 </div>
+
+            <!-- AR Digital -->
+            <div v-if="arNotifications && arNotifications.length > 0"
+                class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h2 class="text-sm font-semibold text-[#2d7ab5] uppercase tracking-wide mb-4">AR Digital</h2>
+
+                <div v-for="ar in arNotifications" :key="ar.id" class="mb-6 last:mb-0">
+                    <!-- Header da notificação -->
+                    <div class="flex items-center gap-3 mb-3">
+                        <span :class="['px-2.5 py-1 rounded-full text-xs font-semibold', AR_STATUS_COLORS[ar.status] ?? 'bg-gray-100 text-gray-600']">
+                            {{ AR_STATUS_LABELS[ar.status] ?? ar.status }}
+                        </span>
+                        <span class="text-xs text-gray-400 font-mono">{{ ar.destinatario_email }}</span>
+                        <span v-if="ar.destinatario_whatsapp" class="text-xs text-gray-400">
+                            💬 {{ ar.destinatario_whatsapp }}
+                        </span>
+                        <span class="ml-auto text-xs text-gray-400">{{ formatDate(ar.created_at) }}</span>
+                    </div>
+
+                    <!-- CPF confirmado -->
+                    <div v-if="ar.cpf_hash" class="mb-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                        <span>CPF confirmado pelo destinatário</span>
+                        <code class="font-mono text-emerald-600">{{ ar.cpf_hash.substring(0, 16) }}…</code>
+                    </div>
+
+                    <!-- Token / link -->
+                    <div class="mb-3 flex items-center gap-2">
+                        <code class="text-xs bg-gray-50 border border-gray-200 rounded px-3 py-1.5 flex-1 font-mono break-all text-gray-500">
+                            /ar/boleto/{{ ar.token }}
+                        </code>
+                        <a :href="`/ar/boleto/${ar.token}`" target="_blank"
+                            class="text-xs text-[#3a9fd8] hover:underline whitespace-nowrap">Abrir</a>
+                    </div>
+
+                    <!-- Timeline de eventos -->
+                    <div v-if="ar.events && ar.events.length > 0" class="mt-3">
+                        <p class="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Eventos registrados</p>
+                        <ol class="space-y-2">
+                            <li v-for="ev in ar.events" :key="ev.id || ev.ocorrido_em"
+                                class="flex items-start gap-3 text-xs">
+                                <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-sm">
+                                    {{ AR_CANAL_ICONS[ev.canal] ?? '📋' }}
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-baseline gap-2 flex-wrap">
+                                        <span class="font-medium text-gray-700">
+                                            {{ AR_EVENT_LABELS[ev.tipo] ?? ev.tipo }}
+                                        </span>
+                                        <span class="text-gray-400 text-[10px]">
+                                            {{ ev.ocorrido_em ? formatDate(ev.ocorrido_em) : '—' }}
+                                        </span>
+                                    </div>
+                                    <div v-if="ev.ip || ev.smtp_code" class="text-gray-400 mt-0.5">
+                                        <span v-if="ev.ip">IP: {{ ev.ip }}</span>
+                                        <span v-if="ev.smtp_code" class="ml-2">SMTP {{ ev.smtp_code }}</span>
+                                    </div>
+                                </div>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <!-- Laudo disponível -->
+                    <div v-if="ar.laudo_path" class="mt-3">
+                        <a :href="route('backoffice.tenants.boletos.ar-laudo', [tenant.id, boleto.id])"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 text-xs text-[#3a9fd8] hover:underline font-medium">
+                            📋 Baixar Laudo AR Digital
+                        </a>
+                    </div>
+
+                    <hr v-if="arNotifications.length > 1" class="mt-4 border-gray-100" />
+                </div>
+            </div>
 
             </div>
 

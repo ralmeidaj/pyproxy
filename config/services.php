@@ -40,4 +40,12 @@ return [
         'webhook_url'    => env('PJBANK_WEBHOOK_URL'),
     ],
 
+    'meta_whatsapp' => [
+        'enabled'       => env('META_WA_ENABLED', false),
+        'phone_id'      => env('META_WA_PHONE_ID'),
+        'access_token'  => env('META_WA_ACCESS_TOKEN'),
+        'verify_token'  => env('META_WA_WEBHOOK_VERIFY_TOKEN'),
+        'api_version'   => env('META_WA_API_VERSION', 'v19.0'),
+    ],
+
 ];

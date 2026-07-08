@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 // Models referenced via HasMany — resolved at runtime
@@ -63,6 +64,11 @@ class Tenant extends Model
     public function boletos(): HasMany
     {
         return $this->hasMany(Boleto::class);
+    }
+
+    public function arDigitalConfig(): HasOne
+    {
+        return $this->hasOne(ArDigitalConfig::class);
     }
 
     public function isActive(): bool

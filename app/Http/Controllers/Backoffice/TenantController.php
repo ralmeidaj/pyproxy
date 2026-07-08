@@ -56,8 +56,9 @@ class TenantController extends Controller
     {
         $tenant->load([
             'statusHistory.backofficeUser',
-            'apiKeys'      => fn ($q) => $q->latest(),
-            'boletoConfigs' => fn ($q) => $q->select('id', 'tenant_id', 'name', 'is_default', 'status')->latest(),
+            'apiKeys'        => fn ($q) => $q->latest(),
+            'boletoConfigs'  => fn ($q) => $q->select('id', 'tenant_id', 'name', 'is_default', 'status')->latest(),
+            'arDigitalConfig',
         ]);
 
         return Inertia::render('Backoffice/Tenants/Show', [

@@ -301,6 +301,37 @@ function formatDate(d) {
                 </div>
             </div>
 
+            <!-- AR Digital — full width -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xs font-semibold text-[#2d7ab5] uppercase tracking-wider">AR Digital</h2>
+                    <a :href="route('backoffice.tenants.ar-digital.show', tenant.id)"
+                        class="text-xs bg-[#3a9fd8] hover:bg-[#2889c8] text-white px-3 py-1.5 rounded-lg transition-colors">
+                        Configurar
+                    </a>
+                </div>
+                <div class="flex items-center gap-4 text-sm">
+                    <div v-if="tenant.ar_digital_config?.enabled"
+                        class="flex items-center gap-2 text-emerald-700">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                        <span class="font-medium">Habilitado</span>
+                        <span class="text-xs text-gray-400 ml-2">
+                            Pixel: {{ tenant.ar_digital_config.pixel_tracking ? 'sim' : 'não' }}
+                            · CPF: {{ tenant.ar_digital_config.cpf_confirmation ? 'sim' : 'não' }}
+                            · ACT: {{ tenant.ar_digital_config.act_provider ?? '—' }}
+                        </span>
+                    </div>
+                    <div v-else class="flex items-center gap-2 text-gray-400">
+                        <span class="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0"></span>
+                        <span>Módulo desabilitado</span>
+                        <span class="text-xs ml-2">
+                            <a :href="route('backoffice.tenants.ar-digital.show', tenant.id)"
+                                class="text-[#3a9fd8] hover:underline">Clique para configurar</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Histórico de Status — full width, timeline -->
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <h2 class="text-xs font-semibold text-[#2d7ab5] uppercase tracking-wider mb-4">Histórico de Status</h2>

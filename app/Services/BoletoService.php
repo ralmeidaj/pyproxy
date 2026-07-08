@@ -13,6 +13,7 @@ use App\Models\BoletoSplit;
 use App\Models\Tenant;
 use App\Services\BankPartners\BankPartnerFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class BoletoService
 {
@@ -20,6 +21,7 @@ class BoletoService
         private readonly BankPartnerFactory $bankPartnerFactory,
         private readonly SplitService       $splitService,
         private readonly AuditLogService    $auditLog,
+        private readonly ArDigitalService   $arDigital,
     ) {}
 
     public function issue(Tenant $tenant, IssueBoletoData $data, ?int $configId = null): Boleto
@@ -114,6 +116,11 @@ class BoletoService
             return $boleto;
         });
 
+        // AR Digital: cria notificação de rastreamento se o tenant tiver o módulo ativo.
+        // Executado após o commit da transaction para que a notificação exista no DB
+        // antes de qualquer job de fila ler o boleto.
+        $this->ativarArDigitalSeHabilitado($tenant, $boleto);
+
         BoletoIssued::dispatch($tenant->id, $boleto->amount_cents, $boleto->payer_name, $boleto->external_ref);
 
         return $boleto;
@@ -167,6 +174,25 @@ class BoletoService
         ]);
 
         return $boleto->fresh();
+    }
+
+    private function ativarArDigitalSeHabilitado(Tenant $tenant, Boleto $boleto): void
+    {
+        try {
+            $tenant->loadMissing('arDigitalConfig');
+
+            if (! $tenant->arDigitalConfig?->enabled) {
+                return;
+            }
+
+            $this->arDigital->notificar($boleto);
+        } catch (\Throwable $e) {
+            // Falha no AR Digital nunca deve interromper a emissão do boleto
+            Log::error('AR Digital: falha ao criar notificação', [
+                'boleto_id' => $boleto->id,
+                'error'     => $e->getMessage(),
+            ]);
+        }
     }
 
     public function paginate(Tenant $tenant, int $perPage = 20, ?string $status = null, ?string $search = null)

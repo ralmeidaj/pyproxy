@@ -20,16 +20,24 @@ cd "c:\Users\raimundo.araujo\Documents\Projetos\payproxy" && npm run build
 ```
 Avisar o usuário para fazer **Ctrl+Shift+R** após o build. Nunca declarar tarefa frontend concluída sem ter rodado o build.
 
+**Documentação obrigatória ao concluir qualquer implementação.** Ao finalizar qualquer fase, módulo ou funcionalidade relevante, atualizar obrigatoriamente:
+- `CLAUDE.md` — refletir novos services, rotas, decisões arquiteturais, padrões e regras que a IA precisa conhecer em sessões futuras
+- `README.md` — refletir novos módulos, comandos, variáveis de ambiente e rotas para o desenvolvedor humano
+
+Nunca declarar uma implementação concluída sem ter atualizado os dois documentos.
+
 ---
 
 ## Contexto do projeto
 
-Plataforma SaaS intermediária para geração de boletos bancários com split de pagamento e registro DDA (Débito Direto Autorizado), contratada pela SEFAZ Salvador (Secretaria Municipal da Fazenda).
+Plataforma SaaS intermediária para geração de boletos bancários com split de pagamento, registro DDA (Débito Direto Autorizado) e módulo AR Digital (Aviso de Recebimento com validade jurídica ICP-Brasil), contratada pela SEFAZ Salvador (Secretaria Municipal da Fazenda).
 
 - **Volume estimado:** 341.289 boletos/mês (≈ 4,1 milhões/ano)
 - **Parceiro bancário inicial:** PJBank — arquitetura preparada para múltiplos parceiros via padrão adapter
 - **Conformidade obrigatória:** LGPD, CNAB FEBRABAN, normas BACEN, dados em território nacional
 - **Mensageria v1:** E-mail (Modelo 1) e E-mail + WhatsApp (Modelo 2), configurável por tenant
+- **WhatsApp:** Meta Cloud API via ouvimosvc.com.br (BSP Meta credenciado, Salvador/BA) — template `boleto_notificacao` aprovado no Meta
+- **AR Digital:** rastreamento de entrega com carimbos RFC 3161 ICP-Brasil, confirmação de recebimento por CPF e laudo PDF jurídico
 - **Termo de Referência (TR):** documento base de alinhamento de todos os requisitos
 
 ---
@@ -184,7 +192,7 @@ O HTML nunca deve ser editado diretamente — toda mudança vai no MD e o HTML �
 | Storage (PDFs, exports) | MinIO (S3-compatible) |
 | Frontend | Inertia.js + Vue 3 + Tailwind CSS 4 |
 | Real-time (dashboard) | Laravel Reverb (WebSocket) |
-| WhatsApp | Evolution API (self-hosted Docker) |
+| WhatsApp | Meta Cloud API via ouvimosvc.com.br (BSP Meta) |
 | Build frontend | Vite 6 |
 
 ### Projeto de referência
@@ -227,6 +235,10 @@ payproxy/
 │       ├── BankPartners/
 │       │   ├── PJBankService.php    # v1 — único adapter implementado
 │       │   └── BankPartnerFactory.php
+│       ├── ArDigitalService.php         # Orquestra o fluxo AR Digital
+│       ├── ArEvidencePdfService.php     # Gera laudo PDF (DomPDF + QR code RFC 3161)
+│       ├── ArTrackingService.php        # Pixel, token, hash SHA-256, confirmação CPF
+│       ├── Rfc3161TimestampService.php  # Carimbos de tempo ACT ICP-Brasil
 │       ├── BoletoService.php
 │       ├── SplitService.php
 │       ├── WebhookDeliveryService.php
@@ -237,9 +249,15 @@ payproxy/
 │       └── CryptoService.php
 ├── database/migrations/
 ├── resources/js/                    # Vue 3 + Inertia (Pages + Components)
+│   └── Pages/
+│       ├── ArDigital/
+│       │   └── ConfirmarRecebimento.vue  # Landing page pública AR Digital
+│       └── Backoffice/
+│           └── ArDigital/
+│               └── Config.vue            # Configuração AR Digital por tenant
 ├── routes/
 │   ├── api.php                      # API pública REST
-│   ├── web.php                      # Rotas Inertia
+│   ├── web.php                      # Rotas Inertia + rotas públicas AR Digital
 │   └── channels.php                 # Reverb WebSocket
 └── docker-compose.yml
 ```
@@ -403,6 +421,98 @@ export const BoletoService = {
 | Auth portal/backoffice | Laravel session + TOTP | 2FA obrigatório (`pragmarx/google2fa-laravel`) |
 | Filas | Laravel Queues + Redis + Horizon | Nativo, monitoramento via Horizon |
 | Real-time | Laravel Reverb | WebSocket nativo, zero infra extra |
+| WhatsApp | Meta Cloud API (ouvimosvc.com.br BSP) | Evolution API descartada — Meta API é o padrão homologado |
+| AR Digital — PDF | DomPDF (`barryvdh/laravel-dompdf`) | Já instalado; gera PDF A4 a partir de HTML com QR code SVG (`bacon/bacon-qr-code`) |
+| AR Digital — CPF/CNPJ | Hash SHA-256 irreversível (`cpf_hash`) | LGPD: dado pessoal nunca armazenado em texto claro |
+| AR Digital — carimbo stub | JSON base64 com `act_provider=stub-dev` | Dev sem ACT real; flag `_stub: true` no TSR permite distinguir em produção |
+
+---
+
+## Módulo AR Digital
+
+Implementado nas Fases 1–10. Fornece prova jurídica de entrega e recebimento de boletos.
+
+### Tabelas
+
+| Tabela | Propósito |
+|---|---|
+| `ar_digital_configs` | Configuração por tenant (enabled, pixel_tracking, cpf_confirmation, act_provider) |
+| `ar_digital_notifications` | Uma por boleto emitido com AR ativo — token UUID, status, hash do documento |
+| `ar_digital_events` | Cada evento rastreado (envio, entrega, abertura, confirmação, bounce) |
+| `ar_digital_timestamps` | Carimbo RFC 3161 por evento (TSR base64, provedor ACT, hash_input) |
+
+### Fluxo de status
+
+```
+enviado → entregue → lido → confirmado   (progressão normal)
+enviado → bounce                          (falha de entrega — terminal)
+```
+Nunca há downgrade de status. `statusMaisAvancado()` em `ArDigitalService` garante isso.
+
+### Rotas públicas AR Digital (`routes/web.php`)
+
+```
+GET  /ar/pixel/{token}              # Pixel 1×1 — registra leitura_pixel
+GET  /ar/boleto/{token}             # Landing page — exibe boleto ao destinatário
+POST /ar/boleto/{token}/confirmar   # Confirmação de recebimento via CPF
+```
+
+### Rotas de webhook (`routes/api.php`)
+
+```
+POST /api/webhooks/smtp-dsn         # DSN SMTP (entrega ou bounce via e-mail)
+GET  /api/webhooks/meta-whatsapp    # Verificação do webhook Meta (hub.challenge)
+POST /api/webhooks/meta-whatsapp    # Eventos de entrega WhatsApp (delivered/read)
+```
+
+### Rota backoffice
+
+```
+GET /backoffice/tenants/{tenant}/ar-digital       # Configuração AR Digital do tenant
+PUT /backoffice/tenants/{tenant}/ar-digital       # Salvar configuração
+GET /backoffice/tenants/{tenant}/boletos/{boleto}/ar-laudo  # Download do laudo PDF
+```
+
+### Jobs AR Digital
+
+| Job | Trigger | O que faz |
+|---|---|---|
+| `ApplyRfc3161TimestampJob` | A cada novo evento | Aplica carimbo de tempo RFC 3161 via ACT ICP-Brasil (ou stub em dev) |
+| `GenerateArEvidencePdfJob` | 120s após emissão; imediato ao atingir estado terminal | Gera laudo PDF com cadeia completa de evidências e salva no MinIO |
+
+### Laudo PDF — conteúdo
+
+Gerado por `ArEvidencePdfService::gerar()` com DomPDF + `bacon/bacon-qr-code`:
+1. Identificação (referência `ARD-XXXXXX`, token UUID, hash do documento)
+2. Dados do boleto (ref externa, valor, vencimento, emitente)
+3. Dados do destinatário — **mascarados LGPD** (e-mail, telefone, CPF como hash SHA-256)
+4. Cadeia de evidências — tabela com todos os eventos e seus carimbos RFC 3161
+5. QR code SVG de verificação online
+6. Rodapé com aviso LGPD e declaração de validade jurídica ICP-Brasil
+
+### Configuração ACT ICP-Brasil (produção)
+
+Adicionar em `config/services.php`:
+```php
+'act' => [
+    'enabled' => env('ACT_ENABLED', false),
+    'serpro'  => ['url' => env('ACT_SERPRO_URL'), 'user' => env('ACT_SERPRO_USER'), 'password' => env('ACT_SERPRO_PASSWORD')],
+    'bry'     => ['url' => env('ACT_BRY_URL'),    'user' => env('ACT_BRY_USER'),    'password' => env('ACT_BRY_PASSWORD')],
+    'soluti'  => ['url' => env('ACT_SOLUTI_URL'),  'user' => env('ACT_SOLUTI_USER'),  'password' => env('ACT_SOLUTI_PASSWORD')],
+],
+```
+Quando `ACT_ENABLED=true` + credenciais preenchidas, `Rfc3161TimestampService` usa a API real em vez do stub.
+
+### Configuração Meta WhatsApp
+
+```env
+META_WA_ENABLED=true
+META_WA_PHONE_ID=<ID do número no Meta>
+META_WA_ACCESS_TOKEN=<token permanente>
+META_WA_WEBHOOK_VERIFY_TOKEN=<token de verificação>
+META_WA_API_VERSION=v19.0
+```
+Template utilizado: `boleto_notificacao` (aprovado no Meta). Variáveis: `{{1}}` nome, `{{2}}` valor, `{{3}}` vencimento, `{{4}}` link PDF, `{{5}}` nome do tenant.
 
 ### Testes
 

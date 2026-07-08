@@ -6,6 +6,7 @@ use App\Enums\BoletoStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Boleto extends Model
@@ -84,5 +85,15 @@ class Boleto extends Model
     public function notificationLogs(): HasMany
     {
         return $this->hasMany(NotificationLog::class);
+    }
+
+    public function arDigitalNotifications(): HasMany
+    {
+        return $this->hasMany(ArDigitalNotification::class);
+    }
+
+    public function latestArDigitalNotification(): HasOne
+    {
+        return $this->hasOne(ArDigitalNotification::class)->latestOfMany();
     }
 }

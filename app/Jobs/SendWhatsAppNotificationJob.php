@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\NotificationEvent;
+use App\Models\ArDigitalNotification;
 use App\Models\Boleto;
 use App\Models\NotificationLog;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,37 +26,93 @@ class SendWhatsAppNotificationJob implements ShouldQueue
 
     public function handle(): void
     {
-        $boleto = Boleto::with('tenant')->find($this->boletoId);
+        $boleto = Boleto::with(['tenant.arDigitalConfig'])->find($this->boletoId);
 
         if (! $boleto || ! $boleto->payer_phone) {
             $this->updateLog('failed', 'Boleto não encontrado ou sem telefone');
             return;
         }
 
-        $evolutionUrl = config('services.evolution_api.url');
-        $evolutionKey = config('services.evolution_api.key');
-        $instance     = config('services.evolution_api.instance');
+        $event = NotificationEvent::from($this->event);
 
-        // v1: Evolution API não configurada em dev — apenas log
-        if (! $evolutionUrl || ! $evolutionKey) {
-            Log::info('[WhatsApp] Notificação não enviada (Evolution API não configurada)', [
+        // Apenas o evento de emissão tem template WhatsApp definido nesta versão
+        if ($event !== NotificationEvent::Issued) {
+            Log::info('[WhatsApp] Evento sem template configurado — ignorado', [
                 'boleto_id' => $boleto->id,
                 'event'     => $this->event,
+            ]);
+            $this->updateLog('sent');
+            return;
+        }
+
+        $enabled = config('services.meta_whatsapp.enabled');
+        $phoneId = config('services.meta_whatsapp.phone_id');
+        $token   = config('services.meta_whatsapp.access_token');
+
+        // Sem credenciais em dev — apenas loga
+        if (! $enabled || ! $phoneId || ! $token) {
+            Log::info('[WhatsApp] Meta API não configurada — notificação simulada', [
+                'boleto_id' => $boleto->id,
                 'phone'     => $boleto->payer_phone,
             ]);
             $this->updateLog('sent');
             return;
         }
 
-        $event   = NotificationEvent::from($this->event);
-        $message = $this->buildMessage($boleto, $event);
+        $version  = config('services.meta_whatsapp.api_version', 'v19.0');
+        $to       = $this->sanitizePhone($boleto->payer_phone);
+        $amount   = 'R$ ' . number_format($boleto->amount_cents / 100, 2, ',', '.');
+        $dueDate  = $boleto->due_date->format('d/m/Y');
+        $linkPdf  = $boleto->pdf_url ?? '';
 
-        Http::withHeader('apikey', $evolutionKey)
-            ->post("{$evolutionUrl}/message/sendText/{$instance}", [
-                'number'  => $this->sanitizePhone($boleto->payer_phone),
-                'options' => ['delay' => 1200],
-                'textMessage' => ['text' => $message],
+        $response = Http::withToken($token)
+            ->post("https://graph.facebook.com/{$version}/{$phoneId}/messages", [
+                'messaging_product' => 'whatsapp',
+                'to'                => $to,
+                'type'              => 'template',
+                'template'          => [
+                    'name'     => 'boleto_notificacao',
+                    'language' => ['code' => 'pt_BR'],
+                    'components' => [[
+                        'type'       => 'body',
+                        'parameters' => [
+                            ['type' => 'text', 'text' => $boleto->payer_name],
+                            ['type' => 'text', 'text' => $amount],
+                            ['type' => 'text', 'text' => $dueDate],
+                            ['type' => 'text', 'text' => $linkPdf],
+                            ['type' => 'text', 'text' => $boleto->tenant->name],
+                        ],
+                    ]],
+                ],
             ]);
+
+        if (! $response->successful()) {
+            Log::error('[WhatsApp] Falha ao enviar via Meta API', [
+                'boleto_id' => $boleto->id,
+                'status'    => $response->status(),
+                'body'      => $response->body(),
+            ]);
+            $this->fail(new \RuntimeException('Meta API retornou ' . $response->status()));
+            return;
+        }
+
+        // Armazena o wamid para correlacionar com o webhook de entrega (AR Digital)
+        $wamid = data_get($response->json(), 'messages.0.id');
+
+        if ($wamid) {
+            $config = $boleto->tenant->arDigitalConfig;
+            if ($config?->enabled) {
+                ArDigitalNotification::where('boleto_id', $boleto->id)
+                    ->latest()
+                    ->limit(1)
+                    ->update(['meta_whatsapp_message_id' => $wamid]);
+            }
+
+            Log::info('[WhatsApp] Mensagem enviada via Meta API', [
+                'boleto_id' => $boleto->id,
+                'wamid'     => $wamid,
+            ]);
+        }
 
         $this->updateLog('sent');
     }
@@ -74,22 +131,7 @@ class SendWhatsAppNotificationJob implements ShouldQueue
             $digits = '55' . $digits;
         }
 
-        return $digits . '@s.whatsapp.net';
-    }
-
-    private function buildMessage(Boleto $boleto, NotificationEvent $event): string
-    {
-        $amount  = 'R$ ' . number_format($boleto->amount_cents / 100, 2, ',', '.');
-        $dueDate = $boleto->due_date->format('d/m/Y');
-        $name    = $boleto->payer_name;
-
-        return match($event) {
-            NotificationEvent::Issued    => "Olá, {$name}! Seu boleto no valor de {$amount} foi emitido com vencimento em {$dueDate}.\n\nLinha digitável:\n{$boleto->digitable_line}",
-            NotificationEvent::Paid      => "Pagamento confirmado! Recebemos seu pagamento de {$amount}. Obrigado, {$name}!",
-            NotificationEvent::Cancelled => "Seu boleto de {$amount} foi cancelado. Dúvidas? Entre em contato conosco.",
-            NotificationEvent::DueSoon   => "Atenção, {$name}! Seu boleto de {$amount} vence em 2 dias ({$dueDate}).\n\nLinha digitável:\n{$boleto->digitable_line}",
-            NotificationEvent::Overdue   => "Seu boleto de {$amount} com vencimento em {$dueDate} está vencido. Entre em contato para regularização.",
-        };
+        return $digits;
     }
 
     private function updateLog(string $status, ?string $error = null): void

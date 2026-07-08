@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\MetaWhatsAppWebhookController;
+use App\Http\Controllers\Api\SmtpDsnController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BoletoController;
 use App\Http\Controllers\Api\V1\WebhookController;
@@ -23,4 +25,11 @@ Route::prefix('webhooks')->name('api.webhooks.')->group(function () {
     Route::post('pjbank', [WebhookController::class, 'pjbank'])
         ->middleware('webhook.hmac')
         ->name('pjbank');
+
+    // DSN SMTP — notificações de entrega/bounce do provedor de e-mail
+    Route::post('smtp-dsn', [SmtpDsnController::class, 'handle'])->name('smtp-dsn');
+
+    // Meta WhatsApp — verificação e eventos de entrega/leitura
+    Route::get('meta-whatsapp',  [MetaWhatsAppWebhookController::class, 'verify'])->name('meta-whatsapp.verify');
+    Route::post('meta-whatsapp', [MetaWhatsAppWebhookController::class, 'handle'])->name('meta-whatsapp.handle');
 });

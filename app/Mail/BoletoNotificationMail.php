@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Enums\NotificationEvent;
+use App\Models\ArDigitalNotification;
 use App\Models\Boleto;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -17,6 +18,8 @@ class BoletoNotificationMail extends Mailable
     public function __construct(
         public readonly Boleto $boleto,
         public readonly NotificationEvent $event,
+        public readonly ?ArDigitalNotification $arNotification = null,
+        public readonly bool $pixelTracking = false,
     ) {}
 
     public function envelope(): Envelope

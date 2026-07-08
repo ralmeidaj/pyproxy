@@ -61,14 +61,21 @@
 </div>
 @endif
 
-<!-- CTA Button -->
-@if($boleto->pdf_url)
+<!-- CTA Button — link AR Digital se disponível, senão link direto ao PDF -->
+@php
+    $ctaUrl   = $arNotification
+        ? route('ar.boleto.show', ['token' => $arNotification->token])
+        : $boleto->pdf_url;
+    $ctaLabel = $arNotification ? 'Acessar Boleto' : '📄 Baixar PDF do Boleto';
+@endphp
+
+@if($ctaUrl)
 <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
     <tr>
         <td style="background:#2d5294;border-radius:8px;">
-            <a href="{{ $boleto->pdf_url }}" target="_blank"
+            <a href="{{ $ctaUrl }}" target="_blank"
                 style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">
-                📄 Baixar PDF do Boleto
+                {{ $ctaLabel }}
             </a>
         </td>
     </tr>
@@ -78,4 +85,11 @@
 <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6;">
     Você pode pagar via internet banking, aplicativo do seu banco ou em qualquer agência bancária, lotérica ou correspondente bancário.
 </p>
+
+{{-- Pixel AR Digital (rastreamento de abertura) — invisível, deve ficar ao final do conteúdo --}}
+@if($arNotification && $pixelTracking)
+<img src="{{ route('ar.pixel', ['token' => $arNotification->token]) }}"
+     width="1" height="1" alt=""
+     style="display:block;width:1px;height:1px;border:0;opacity:0;">
+@endif
 @endsection

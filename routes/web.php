@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Backoffice\ApiKeyController;
+use App\Http\Controllers\Backoffice\ArDigitalConfigController;
 use App\Http\Controllers\Backoffice\AuditLogController;
 use App\Http\Controllers\Backoffice\Auth\ChangePasswordController as BackofficeChangePasswordController;
 use App\Http\Controllers\Backoffice\Auth\LoginController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Backoffice\DashboardController;
 use App\Http\Controllers\Backoffice\ReportController;
 use App\Http\Controllers\Backoffice\SplitConfigController;
 use App\Http\Controllers\Backoffice\TenantController;
+use App\Http\Controllers\ArTrackingController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\Portal\Auth\AcceptInviteController;
 use App\Http\Controllers\Portal\Auth\ChangePasswordController as PortalChangePasswordController;
@@ -26,6 +28,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', HealthController::class)->name('health');
 
 Route::get('/', fn () => redirect()->route('backoffice.dashboard'));
+
+// ─────────────────────────────────────────────
+// AR Digital — rastreamento público (sem autenticação)
+// ─────────────────────────────────────────────
+Route::prefix('ar')->name('ar.')->group(function () {
+    Route::get('pixel/{token}',             [ArTrackingController::class, 'pixel'])->name('pixel');
+    Route::get('boleto/{token}',            [ArTrackingController::class, 'exibirBoleto'])->name('boleto.show');
+    Route::post('boleto/{token}/confirmar', [ArTrackingController::class, 'confirmarRecebimento'])->name('boleto.confirmar');
+});
 
 // ─────────────────────────────────────────────
 // Debug — apenas em ambientes não-produção
@@ -154,6 +165,13 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
             ->name('tenants.boletos.index');
         Route::get('tenants/{tenant}/boletos/{boleto}', [BoletoController::class, 'show'])
             ->name('tenants.boletos.show');
+        Route::get('tenants/{tenant}/boletos/{boleto}/ar-laudo', [BoletoController::class, 'downloadLaudo'])
+            ->name('tenants.boletos.ar-laudo');
+
+        Route::get('tenants/{tenant}/ar-digital', [ArDigitalConfigController::class, 'show'])
+            ->name('tenants.ar-digital.show');
+        Route::put('tenants/{tenant}/ar-digital', [ArDigitalConfigController::class, 'update'])
+            ->name('tenants.ar-digital.update');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('reports/export', [ReportController::class, 'export'])->name('reports.export');
