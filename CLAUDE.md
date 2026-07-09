@@ -498,10 +498,14 @@ Adicionar em `config/services.php`:
     'enabled' => env('ACT_ENABLED', false),
     'serpro'  => ['url' => env('ACT_SERPRO_URL'), 'user' => env('ACT_SERPRO_USER'), 'password' => env('ACT_SERPRO_PASSWORD')],
     'bry'     => ['url' => env('ACT_BRY_URL'),    'user' => env('ACT_BRY_USER'),    'password' => env('ACT_BRY_PASSWORD')],
-    'soluti'  => ['url' => env('ACT_SOLUTI_URL'),  'user' => env('ACT_SOLUTI_USER'),  'password' => env('ACT_SOLUTI_PASSWORD')],
+    'soluti'     => ['url' => env('ACT_SOLUTI_URL'),    'user' => env('ACT_SOLUTI_USER'),    'password' => env('ACT_SOLUTI_PASSWORD')],
+    'certisign'  => ['url' => env('ACT_CERTISIGN_URL'), 'user' => env('ACT_CERTISIGN_USER'), 'password' => env('ACT_CERTISIGN_PASSWORD')],
+    // Sandbox gratuito para testes em dev (sem ICP-Brasil)
+    'freetsa'    => ['url' => 'https://freetsa.org/tsr', 'user' => '', 'password' => ''],
 ],
 ```
 Quando `ACT_ENABLED=true` + credenciais preenchidas, `Rfc3161TimestampService` usa a API real em vez do stub.
+Para testar em dev sem contratar ACT ICP-Brasil, use `freetsa` como provider (sem credenciais — autenticação condicional).
 
 ### Configuração Meta WhatsApp
 

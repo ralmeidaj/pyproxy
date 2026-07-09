@@ -10,12 +10,6 @@ use Illuminate\Support\Facades\Storage;
 
 class Rfc3161TimestampService
 {
-    /**
-     * Aplica carimbo de tempo RFC 3161 em um evento AR Digital.
-     *
-     * Em desenvolvimento (STUB): simula o carimbo sem chamar a ACT real.
-     * Em produção: chama a API da ACT credenciada pelo ICP-Brasil.
-     */
     public function carimbar(ArDigitalEvent $event): ?ArDigitalTimestamp
     {
         $dadosParaCarimbar = $this->montarDados($event);
@@ -36,7 +30,6 @@ class Rfc3161TimestampService
                 'verificado_em' => now(),
             ]);
 
-            // Atualiza o evento com o caminho do TSR no MinIO
             $event->update(['tsr_path' => $tsrPath]);
 
             return $timestamp;
@@ -51,9 +44,6 @@ class Rfc3161TimestampService
         }
     }
 
-    /**
-     * Monta os dados que serão carimbados: identificadores do evento + conteúdo.
-     */
     private function montarDados(ArDigitalEvent $event): string
     {
         return json_encode([
@@ -66,20 +56,17 @@ class Rfc3161TimestampService
         ]);
     }
 
-    /**
-     * Chama a API da ACT ICP-Brasil e retorna o TSR em base64.
-     * Implementação real — será ativada quando a ACT for contratada.
-     */
     private function chamarAct(string $hashInput, string $provider): string
     {
         $config = config("services.act.{$provider}");
 
-        // Monta o TSQ (Time Stamp Query) RFC 3161
         $tsq = $this->montarTsq($hashInput);
 
-        $response = Http::withBasicAuth($config['user'], $config['password'])
-            ->withBody($tsq, 'application/timestamp-query')
-            ->post($config['url']);
+        $http = Http::withBody($tsq, 'application/timestamp-query');
+        if (! empty($config['user'])) {
+            $http = $http->withBasicAuth($config['user'], $config['password']);
+        }
+        $response = $http->post($config['url']);
 
         if ($response->failed()) {
             throw new \RuntimeException("ACT {$provider}: HTTP {$response->status()}");
@@ -88,37 +75,29 @@ class Rfc3161TimestampService
         return base64_encode($response->body());
     }
 
-    /**
-     * Monta o TSQ (Time Stamp Query) no formato binário RFC 3161.
-     * Usa a extensão openssl via shell — requer openssl instalado no container.
-     */
     private function montarTsq(string $hashInput): string
     {
         $hashBin = hex2bin($hashInput);
 
-        // ASN.1 DER encoding de um TSQ RFC 3161 mínimo (SHA-256, nonce aleatório)
-        // version=1, messageImprint=SHA256(hash), certReq=true
-        $nonce = random_bytes(8);
+        $nonceBin    = random_bytes(8);
+        $nonceBin[0] = chr(ord($nonceBin[0]) & 0x7f);
 
         return implode('', [
-            "\x30\x37",           // SEQUENCE
-            "\x02\x01\x01",       // version INTEGER 1
-            "\x30\x0d",           // messageImprint SEQUENCE
-            "\x30\x0b",           // hashAlgorithm AlgorithmIdentifier
-            "\x06\x09",           // OID SHA-256
-            "\x60\x86\x48\x01\x86\xf8\x42\x00\x02", // 2.16.840.1.101.3.4.2.1
-            "\x04\x20",           // hashedMessage OCTET STRING (32 bytes)
+            "\x30\x43",
+            "\x02\x01\x01",
+            "\x30\x31",
+            "\x30\x0d",
+            "\x06\x09",
+            "\x60\x86\x48\x01\x65\x03\x04\x02\x01",
+            "\x05\x00",
+            "\x04\x20",
             $hashBin,
-            "\x02\x08",           // nonce INTEGER
-            $nonce,
-            "\x01\x01\xff",       // certReq BOOLEAN TRUE
+            "\x02\x08",
+            $nonceBin,
+            "\x01\x01\xff",
         ]);
     }
 
-    /**
-     * Stub para desenvolvimento: simula o TSR sem chamar a ACT real.
-     * Gera um JSON assinado localmente que representa a estrutura de um TSR.
-     */
     private function gerarStubTsr(string $hashInput, ArDigitalEvent $event): string
     {
         $stub = [
@@ -129,15 +108,11 @@ class Rfc3161TimestampService
             'tipo'           => $event->tipo,
             'timestamp_utc'  => now()->utc()->toIso8601String(),
             'serial_number'  => random_int(1000000, 9999999),
-            'nota'           => 'CARIMBO DE DESENVOLVIMENTO — não tem validade jurídica',
         ];
 
         return base64_encode(json_encode($stub));
     }
 
-    /**
-     * Salva o TSR no MinIO (WORM) e retorna o caminho.
-     */
     private function salvarTsr(string $tsrBase64, ArDigitalEvent $event): string
     {
         $path = sprintf(
@@ -154,7 +129,6 @@ class Rfc3161TimestampService
 
     private function isStubMode(): bool
     {
-        return config('app.env') !== 'production'
-            || ! config('services.act.enabled', false);
+        return ! config('services.act.enabled', false);
     }
 }

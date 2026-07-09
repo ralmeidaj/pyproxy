@@ -2,7 +2,6 @@
 
 namespace App\DTOs;
 
-// Resultado normalizado da emissão de boleto no parceiro bancário (RF-PART-08)
 final readonly class BankBoletoResult
 {
     public function __construct(
@@ -12,6 +11,8 @@ final readonly class BankBoletoResult
         public ?string $pixQrCode,
         public ?string $pdfUrl,
         public bool    $ddaRegistered,
-        public ?string $tokenFacilitador = null,
+        public ?string $tokenFacilitador   = null,
+        public array   $requestPayload     = [],
+        public array   $responsePayload    = [],
     ) {}
 }

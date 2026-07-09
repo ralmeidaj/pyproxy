@@ -47,7 +47,6 @@ class PJBankService implements BankPartnerInterface
             $payload['webhook'] = $pjbankWebhookUrl;
         }
 
-        // Monta split de pagamento (RF-10 a RF-12)
         if ($hasSplit) {
             $payload['split'] = array_values(array_map(function (array $split): array {
                 $details = $split['payee_details'] ?? [];
@@ -70,7 +69,7 @@ class PJBankService implements BankPartnerInterface
 
         if ($response->failed()) {
             throw new BankPartnerException(
-                "PJBank: falha na emissão — HTTP {$response->status()}: " . $response->body()
+                "PJBank: falha na emissao — HTTP {$response->status()}: " . $response->body()
             );
         }
 
@@ -84,6 +83,8 @@ class PJBankService implements BankPartnerInterface
             pdfUrl:           $body['linkBoleto'] ?? null,
             ddaRegistered:    true,
             tokenFacilitador: $body['token_facilitador'] ?? null,
+            requestPayload:   $payload,
+            responsePayload:  is_array($body) ? $body : [],
         );
     }
 
@@ -118,17 +119,15 @@ class PJBankService implements BankPartnerInterface
             );
         }
 
-        // PJBank retorna array — pega o primeiro elemento
         $body = $response->json();
         $data = is_array($body) && isset($body[0]) ? $body[0] : $body;
 
-        // Normaliza para o campo 'status' esperado pela ReconciliationService
         $valorPago     = $data['valor_pago'] ?? '';
         $dataPagamento = $data['data_pagamento'] ?? '';
 
         if (! empty($valorPago) && $valorPago !== '0' && ! empty($dataPagamento)) {
-            $data['status']           = 'pago';
-            $data['forma_pagamento']  = $data['forma_liquidacao'] ?? 'unknown';
+            $data['status']          = 'pago';
+            $data['forma_pagamento'] = $data['forma_liquidacao'] ?? 'unknown';
         } elseif (in_array(strtolower($data['registro_sistema_bancario'] ?? ''), ['cancelado', 'cancelled'])) {
             $data['status'] = 'cancelado';
         } else {

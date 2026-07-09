@@ -119,6 +119,9 @@ docker exec payproxy-app php artisan test
 | `META_WA_WEBHOOK_VERIFY_TOKEN` | Token de verificação do webhook Meta |
 | `AWS_*` | Credenciais MinIO para storage de PDFs e laudos AR |
 | `PJBANK_CEDENTE` | Credencial PJBank para emissão de boletos |
+| `ACT_ENABLED` | Ativa carimbos RFC 3161 reais (ICP-Brasil ou FreeTSA) |
+| `ACT_SERPRO_URL` / `ACT_SERPRO_USER` / `ACT_SERPRO_PASSWORD` | Credenciais Serpro (produção) |
+| `ACT_BRY_URL` / `ACT_SOLUTI_URL` / `ACT_CERTISIGN_URL` | URLs dos demais provedores ACT |
 
 ---
 

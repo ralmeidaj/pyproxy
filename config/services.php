@@ -40,6 +40,17 @@ return [
         'webhook_url'    => env('PJBANK_WEBHOOK_URL'),
     ],
 
+    'act' => [
+        'enabled'    => env('ACT_ENABLED', false),
+        'serpro'     => ['url' => env('ACT_SERPRO_URL'),    'user' => env('ACT_SERPRO_USER'),    'password' => env('ACT_SERPRO_PASSWORD')],
+        'bry'        => ['url' => env('ACT_BRY_URL'),       'user' => env('ACT_BRY_USER'),       'password' => env('ACT_BRY_PASSWORD')],
+        'soluti'     => ['url' => env('ACT_SOLUTI_URL'),    'user' => env('ACT_SOLUTI_USER'),    'password' => env('ACT_SOLUTI_PASSWORD')],
+        'certisign'  => ['url' => env('ACT_CERTISIGN_URL'), 'user' => env('ACT_CERTISIGN_USER'), 'password' => env('ACT_CERTISIGN_PASSWORD')],
+        // Sandbox gratuito para testes (sem ICP-Brasil — não use em produção)
+        'freetsa'    => ['url' => 'https://freetsa.org/tsr', 'user' => '', 'password' => ''],
+    ],
+
+
     'meta_whatsapp' => [
         'enabled'       => env('META_WA_ENABLED', false),
         'phone_id'      => env('META_WA_PHONE_ID'),

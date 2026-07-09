@@ -92,9 +92,11 @@ class BoletoService
                 'pix_qr_code'      => $result->pixQrCode,
                 'pdf_url'          => $result->pdfUrl,
                 'dda_registered'   => $result->ddaRegistered,
-                'config_snapshot'  => $configSnapshot,
-                'splits_snapshot'  => $splits,
-                'metadata'         => $data->metadata,
+                'config_snapshot'       => $configSnapshot,
+                'splits_snapshot'       => $splits,
+                'bank_request_payload'  => $result->requestPayload,
+                'bank_response_payload' => $result->responsePayload,
+                'metadata'              => $data->metadata,
             ]);
 
             // Persiste splits individuais para rastreabilidade
