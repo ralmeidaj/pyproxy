@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Enums\NotificationEvent;
-use App\Models\ArDigitalNotification;
 use App\Models\Boleto;
 use App\Models\NotificationLog;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,7 +25,7 @@ class SendWhatsAppNotificationJob implements ShouldQueue
 
     public function handle(): void
     {
-        $boleto = Boleto::with(['tenant.arDigitalConfig'])->find($this->boletoId);
+        $boleto = Boleto::with('tenant')->find($this->boletoId);
 
         if (! $boleto || ! $boleto->payer_phone) {
             $this->updateLog('failed', 'Boleto não encontrado ou sem telefone');
@@ -35,7 +34,6 @@ class SendWhatsAppNotificationJob implements ShouldQueue
 
         $event = NotificationEvent::from($this->event);
 
-        // Apenas o evento de emissão tem template WhatsApp definido nesta versão
         if ($event !== NotificationEvent::Issued) {
             Log::info('[WhatsApp] Evento sem template configurado — ignorado', [
                 'boleto_id' => $boleto->id,
@@ -45,13 +43,12 @@ class SendWhatsAppNotificationJob implements ShouldQueue
             return;
         }
 
-        $enabled = config('services.meta_whatsapp.enabled');
-        $phoneId = config('services.meta_whatsapp.phone_id');
-        $token   = config('services.meta_whatsapp.access_token');
+        $enabled = config('services.ovc360.enabled');
+        $key     = config('services.ovc360.integration_key');
+        $url     = config('services.ovc360.endpoint');
 
-        // Sem credenciais em dev — apenas loga
-        if (! $enabled || ! $phoneId || ! $token) {
-            Log::info('[WhatsApp] Meta API não configurada — notificação simulada', [
+        if (! $enabled || ! $key) {
+            Log::info('[WhatsApp] OVC360 não configurada — notificação simulada', [
                 'boleto_id' => $boleto->id,
                 'phone'     => $boleto->payer_phone,
             ]);
@@ -59,60 +56,36 @@ class SendWhatsAppNotificationJob implements ShouldQueue
             return;
         }
 
-        $version  = config('services.meta_whatsapp.api_version', 'v19.0');
-        $to       = $this->sanitizePhone($boleto->payer_phone);
-        $amount   = 'R$ ' . number_format($boleto->amount_cents / 100, 2, ',', '.');
-        $dueDate  = $boleto->due_date->format('d/m/Y');
-        $linkPdf  = $boleto->pdf_url ?? '';
+        $payload = [
+            'name'       => $boleto->payer_name,
+            'phone'      => $this->sanitizePhone($boleto->payer_phone),
+            'invoice_id' => basename(parse_url($boleto->pdf_url ?? '', PHP_URL_PATH)),
+            'due_date'   => $boleto->due_date->format('d/m'),
+            'price'      => 'R$ ' . number_format($boleto->amount_cents / 100, 2, ',', '.'),
+        ];
 
-        $response = Http::withToken($token)
-            ->post("https://graph.facebook.com/{$version}/{$phoneId}/messages", [
-                'messaging_product' => 'whatsapp',
-                'to'                => $to,
-                'type'              => 'template',
-                'template'          => [
-                    'name'     => 'boleto_notificacao',
-                    'language' => ['code' => 'pt_BR'],
-                    'components' => [[
-                        'type'       => 'body',
-                        'parameters' => [
-                            ['type' => 'text', 'text' => $boleto->payer_name],
-                            ['type' => 'text', 'text' => $amount],
-                            ['type' => 'text', 'text' => $dueDate],
-                            ['type' => 'text', 'text' => $linkPdf],
-                            ['type' => 'text', 'text' => $boleto->tenant->name],
-                        ],
-                    ]],
-                ],
-            ]);
+        if ($boleto->payer_email) {
+            $payload['email'] = $boleto->payer_email;
+        }
 
-        if (! $response->successful()) {
-            Log::error('[WhatsApp] Falha ao enviar via Meta API', [
+        $response = Http::withHeader('X-Integration-Key', $key)
+            ->post($url, $payload);
+
+        if (! $response->successful() || ! $response->json('received')) {
+            Log::error('[WhatsApp] Falha ao enviar via OVC360', [
                 'boleto_id' => $boleto->id,
                 'status'    => $response->status(),
                 'body'      => $response->body(),
             ]);
-            $this->fail(new \RuntimeException('Meta API retornou ' . $response->status()));
+            $this->fail(new \RuntimeException('OVC360 retornou ' . $response->status()));
             return;
         }
 
-        // Armazena o wamid para correlacionar com o webhook de entrega (AR Digital)
-        $wamid = data_get($response->json(), 'messages.0.id');
-
-        if ($wamid) {
-            $config = $boleto->tenant->arDigitalConfig;
-            if ($config?->enabled) {
-                ArDigitalNotification::where('boleto_id', $boleto->id)
-                    ->latest()
-                    ->limit(1)
-                    ->update(['meta_whatsapp_message_id' => $wamid]);
-            }
-
-            Log::info('[WhatsApp] Mensagem enviada via Meta API', [
-                'boleto_id' => $boleto->id,
-                'wamid'     => $wamid,
-            ]);
-        }
+        Log::info('[WhatsApp] Mensagem enviada via OVC360', [
+            'boleto_id'  => $boleto->id,
+            'invoice_id' => $boleto->bank_boleto_id,
+            'phone'      => $payload['phone'],
+        ]);
 
         $this->updateLog('sent');
     }
@@ -126,7 +99,6 @@ class SendWhatsAppNotificationJob implements ShouldQueue
     {
         $digits = preg_replace('/\D/', '', $phone);
 
-        // Garante DDI 55 (Brasil)
         if (strlen($digits) === 11 || strlen($digits) === 10) {
             $digits = '55' . $digits;
         }

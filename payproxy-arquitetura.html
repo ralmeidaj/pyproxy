@@ -1,0 +1,653 @@
+﻿<title>Arquitetura Técnica — Plataforma Payproxy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff !important;font-family:'Segoe UI',Arial,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a}
+
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.96);backdrop-filter:blur(4px);border-bottom:1px solid #d0dae8;padding:7px 24px;display:flex;align-items:center;gap:8px;font-size:9pt}
+.tb-brand{font-weight:700;color:#1a2a4a;font-size:9.5pt;margin-right:6px}
+.tb-sep{color:#d0dae8;margin:0 6px}
+.tb-lbl{font-size:9pt;color:#555}
+.tb-btn{padding:3px 10px;border:1px solid #ccd6e0;border-radius:4px;background:#fff;cursor:pointer;font-size:8.5pt;color:#1a2a4a;font-family:inherit}
+.tb-btn:hover{background:#f0f4f8}
+.tb-right{margin-left:auto;font-size:8.5pt;color:#888}
+
+.wrap{max-width:900px;margin:0 auto;padding:56px 48px 60px;background:#fff}
+
+.doc-logo{display:flex;justify-content:flex-end;margin-bottom:6px}
+.doc-logo img{height:125px}
+.doc-title-block{margin-bottom:20px}
+.doc-title-block h1{font-size:20pt;font-weight:700;color:#1a2a4a;border-bottom:3px solid #1a6fb5;padding-bottom:8px;margin-bottom:4px}
+.doc-subtitle{font-size:13pt;color:#555}
+
+.meta-info{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:6px;padding:12px 20px;margin-bottom:28px;display:flex;gap:32px;flex-wrap:wrap}
+.mi{display:flex;flex-direction:column}
+.mi-label{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.mi-val{font-weight:600;color:#1a2a4a;font-size:10pt}
+.badge-ok{display:inline-block;background:#dcfce7;color:#166534;font-size:8.5pt;padding:1px 8px;border-radius:10px;font-weight:700}
+
+h2.sec{font-size:14pt;font-weight:700;color:#1a2a4a;border-bottom:1.5px solid #d0dae8;padding:14px 0 6px;margin-top:28px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+h2.sec::before{content:'▼';font-size:9pt;color:#1a6fb5}
+h2.sec.closed::before{content:'▶'}
+.sec-body{overflow:hidden;transition:max-height .35s ease,opacity .25s ease}
+.sec-body.closed{max-height:0!important;opacity:0;pointer-events:none}
+
+h3{font-size:12pt;font-weight:700;color:#1a4a6b;margin:18px 0 8px}
+p{margin:8px 0}
+ul,ol{margin:8px 0 8px 24px;line-height:1.8}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:10pt}
+th{background:#1a2a4a;color:#fff;padding:8px 12px;text-align:left;font-weight:600}
+td{padding:7px 12px;border-bottom:1px solid #ccd6e0;vertical-align:top}
+tr:nth-child(even) td{background:#f5f8fc}
+
+code{font-family:'Consolas','Courier New',monospace;font-size:9.5pt;background:#f0f4f8;border:1px solid #ccd6e0;border-radius:3px;padding:1px 5px;color:#1a3a5a}
+pre{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:5px;padding:14px 16px;overflow-x:auto;margin:12px 0;font-family:'Consolas','Courier New',monospace;font-size:9.5pt;color:#1a3a5a;line-height:1.5}
+
+.card{background:#f7fafd;border-left:4px solid #1a6fb5;border-radius:0 6px 6px 0;padding:12px 16px;margin:10px 0}
+.card.green{background:#f7fdf7;border-color:#2a7a2a}
+.card.amber{background:#fdf7f0;border-color:#c47a00}
+.card-title{font-weight:700;color:#1a2a4a;margin-bottom:5px}
+
+.diagram{overflow-x:auto;margin:16px 0;text-align:center}
+svg{display:block;margin:0 auto}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+@media(max-width:620px){.g2{grid-template-columns:1fr}}
+
+/* Camadas por Cenário */
+.cenarios{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:16px 0;border:1px solid #d0dae8;border-radius:8px;overflow:hidden}
+.cen-col{display:flex;flex-direction:column}
+.cen-head{padding:10px 14px;font-weight:700;font-size:9.5pt;text-align:center;color:#fff}
+.cen-head.blue{background:#1a6fb5}
+.cen-head.purple{background:#5b21b6}
+.cen-head.green{background:#166534}
+.cen-step{padding:9px 12px;font-size:8.5pt;border-top:1px solid #d0dae8;line-height:1.4}
+.cen-col:nth-child(2) .cen-step,.cen-col:nth-child(2) .cen-arrow{border-left:1px solid #d0dae8;border-right:1px solid #d0dae8}
+.cen-label{font-weight:700;color:#1a2a4a;display:block;margin-bottom:2px}
+.cen-detail{color:#555;font-size:7.5pt}
+.cen-arrow{text-align:center;font-size:11pt;padding:3px 0;border-top:1px solid #e8eef5;color:#1a6fb5;background:#f7fafd}
+.cen-col:nth-child(2) .cen-arrow{color:#5b21b6;background:#f5f3ff}
+.cen-col:nth-child(3) .cen-arrow{color:#166534;background:#f0fdf4}
+.cen-col:nth-child(3) .cen-step{border-top:1px solid #d0dae8}
+
+@media print{
+  .toolbar{display:none}
+  .wrap{padding-top:20px}
+  h2.sec::before{display:none}
+  .sec-body.closed{max-height:none!important;opacity:1;pointer-events:auto}
+  .doc-logo img{height:100px}
+  h2.sec{font-size:12pt}
+}
+</style>
+
+<div class="toolbar">
+  <span class="tb-brand">Payproxy</span>
+  <span class="tb-sep">|</span>
+  <span class="tb-lbl">Seções:</span>
+  <button class="tb-btn" onclick="toggleAll(false)">Expandir</button>
+  <button class="tb-btn" onclick="toggleAll(true)">Recolher</button>
+  <span class="tb-right">Arquitetura Técnica v1.0 — Jul 2026</span>
+</div>
+
+<div class="wrap">
+
+<div class="doc-logo">
+  <img src="data:image/png;base64,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" alt="Ciberian">
+</div>
+
+<div class="doc-title-block">
+  <h1>Arquitetura Técnica</h1>
+  <div class="doc-subtitle">Plataforma Payproxy</div>
+</div>
+
+<div class="meta-info">
+  <div class="mi"><span class="mi-label">Documento</span><span class="mi-val">ARQ-001 v1.0</span></div>
+  <div class="mi"><span class="mi-label">Data</span><span class="mi-val">Julho 2026</span></div>
+  <div class="mi"><span class="mi-label">Contratante</span><span class="mi-val">SEFAZ Salvador</span></div>
+  <div class="mi"><span class="mi-label">Parceiro bancário</span><span class="mi-val">PJBank (v1)</span></div>
+  <div class="mi"><span class="mi-label">Status</span><span class="mi-val"><span class="badge-ok">Implementado</span></span></div>
+</div>
+
+<!-- 1 -->
+<h2 class="sec" onclick="toggle(this)">1. Stack &amp; Infraestrutura</h2>
+<div class="sec-body">
+  <p>Plataforma SaaS multi-tenant para emissão de boletos com split de pagamento, DDA e módulo AR Digital. Volume estimado: <strong>341.289 boletos/mês</strong>.</p>
+  <table>
+    <thead><tr><th>Camada</th><th>Tecnologia</th><th>Versão</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td>Backend</td><td>Laravel + PHP</td><td>11 / 8.3+</td><td>API REST + Inertia SSR</td></tr>
+      <tr><td>Banco de dados</td><td>PostgreSQL</td><td>16</td><td>Persistência principal</td></tr>
+      <tr><td>Cache / Filas</td><td>Redis</td><td>7</td><td>Cache, filas, rate limiting</td></tr>
+      <tr><td>Object storage</td><td>MinIO (S3-compat.)</td><td>—</td><td>PDFs, laudos, exports</td></tr>
+      <tr><td>Frontend</td><td>Vue 3 + Inertia.js</td><td>3 / 2</td><td>Backoffice + Portal</td></tr>
+      <tr><td>CSS / Build</td><td>Tailwind CSS 4 + Vite 6</td><td>—</td><td>Estilização e bundling</td></tr>
+      <tr><td>Real-time</td><td>Laravel Reverb</td><td>—</td><td>WebSocket — dashboard</td></tr>
+      <tr><td>Parceiro bancário</td><td>PJBank API</td><td>v1</td><td>Emissão + registro de boletos</td></tr>
+      <tr><td>WhatsApp</td><td>Meta Cloud API v19.0</td><td>—</td><td>Notificações via ouvimosvc.com.br (BSP Meta)</td></tr>
+      <tr><td>Carimbo de tempo</td><td>ACT ICP-Brasil (RFC 3161)</td><td>—</td><td>Prova jurídica de entrega (AR Digital)</td></tr>
+      <tr><td>PDF / QR Code</td><td>DomPDF + bacon/bacon-qr-code</td><td>—</td><td>Laudos AR Digital</td></tr>
+      <tr><td>API Docs</td><td>darkaonline/l5-swagger</td><td>—</td><td>OpenAPI / Swagger UI</td></tr>
+      <tr><td>2FA backoffice</td><td>pragmarx/google2fa-laravel</td><td>—</td><td>TOTP obrigatório</td></tr>
+      <tr><td>Containers</td><td>Docker Compose</td><td>—</td><td>Dev + produção</td></tr>
+    </tbody>
+  </table>
+  <h3>Serviços Docker</h3>
+  <table>
+    <thead><tr><th>Container</th><th>Imagem</th><th>Porta</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td><code>app</code></td><td>php:8.3-fpm</td><td>9000</td><td>Laravel API + Inertia</td></tr>
+      <tr><td><code>worker</code></td><td>php:8.3-fpm</td><td>—</td><td><code>queue:work</code> — jobs assíncronos</td></tr>
+      <tr><td><code>scheduler</code></td><td>php:8.3-fpm</td><td>—</td><td><code>schedule:work</code></td></tr>
+      <tr><td><code>nginx</code></td><td>nginx:alpine</td><td>80 / 443</td><td>Proxy reverso</td></tr>
+      <tr><td><code>postgres</code></td><td>postgres:16-alpine</td><td>5432</td><td>Banco de dados</td></tr>
+      <tr><td><code>redis</code></td><td>redis:7-alpine</td><td>6379</td><td>Cache + filas</td></tr>
+      <tr><td><code>minio</code></td><td>minio/minio</td><td>9000 / 9001</td><td>Object storage S3</td></tr>
+      <tr><td><code>reverb</code></td><td>—</td><td>8080</td><td>WebSocket Laravel Reverb</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 2 -->
+<h2 class="sec" onclick="toggle(this)">2. Arquitetura da Aplicação</h2>
+<div class="sec-body">
+  <p>Padrão <strong>Service Layer</strong> com <strong>Strategy Pattern</strong> para parceiros bancários. Controllers thin — apenas orquestram. DTOs eliminam dependência do objeto <code>Request</code> dentro dos Services.</p>
+  <div class="card">
+    <strong>Fluxo:</strong> <code>Request → Middleware → FormRequest → Controller → DTO → Service → BankPartnerInterface → PJBankService → API Resource → Response</code>
+  </div>
+  <h3>Services Principais</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Responsabilidade</th></tr></thead>
+    <tbody>
+      <tr><td><code>BoletoService</code></td><td>Emissão, cancelamento e consulta de boletos via PJBank</td></tr>
+      <tr><td><code>SplitService</code></td><td>Cálculo e validação de splits de pagamento</td></tr>
+      <tr><td><code>NotificationService</code></td><td>Orquestra e-mail + WhatsApp por modelo de mensageria</td></tr>
+      <tr><td><code>WebhookDeliveryService</code></td><td>Entrega de webhooks para tenants com retry e HMAC</td></tr>
+      <tr><td><code>ReconciliationService</code></td><td>Conciliação de pagamentos PJBank vs banco local</td></tr>
+      <tr><td><code>ReportService</code></td><td>Geração de relatórios XLSX e CSV</td></tr>
+      <tr><td><code>CryptoService</code></td><td>Criptografia de dados sensíveis (LGPD)</td></tr>
+      <tr><td><code>SanitizationService</code></td><td>Sanitização de CPF, CNPJ, e-mail, telefone</td></tr>
+      <tr><td><code>ArDigitalService</code></td><td>Orquestra o fluxo AR Digital completo</td></tr>
+      <tr><td><code>ArTrackingService</code></td><td>Pixel, token, hash SHA-256, confirmação CPF</td></tr>
+      <tr><td><code>ArEvidencePdfService</code></td><td>Gera laudo PDF (DomPDF + QR code RFC 3161)</td></tr>
+      <tr><td><code>Rfc3161TimestampService</code></td><td>Carimbos de tempo RFC 3161 via ACT ICP-Brasil</td></tr>
+      <tr><td><code>BankPartnerFactory</code></td><td>Factory do Strategy Pattern — retorna adapter correto</td></tr>
+      <tr><td><code>PJBankService</code></td><td>Adapter PJBank — único parceiro ativo em v1</td></tr>
+    </tbody>
+  </table>
+  <h3>Estrutura de Pastas</h3>
+  <pre>payproxy/
+├── app/
+│   ├── Contracts/         # Interfaces (BankPartnerInterface)
+│   ├── DTOs/              # Data Transfer Objects (readonly)
+│   ├── Exceptions/        # Exceptions com HTTP code
+│   ├── Http/
+│   │   ├── Controllers/Api/V1/      # API pública (API Key auth)
+│   │   ├── Controllers/Backoffice/  # Controllers Inertia
+│   │   ├── Middleware/    # ApiKey, TenantScope, HmacWebhook
+│   │   ├── Requests/      # Form Requests (validação PT-BR)
+│   │   └── Resources/     # API Resources (transformação JSON)
+│   ├── Jobs/              # Laravel Jobs (filas assíncronas)
+│   ├── Models/            # Eloquent Models
+│   └── Services/
+│       ├── BankPartners/  # PJBankService, BankPartnerFactory
+│       └── ...            # Services por domínio
+├── resources/js/
+│   ├── composables/       # useBoletos.js, useTenant.js…
+│   ├── services/          # BoletoService.js, TenantService.js…
+│   └── Pages/
+│       ├── ArDigital/     # Landing pública AR Digital
+│       └── Backoffice/    # UI do backoffice
+└── routes/
+    ├── api.php            # API pública REST
+    ├── web.php            # Inertia + rotas AR Digital
+    └── channels.php       # Reverb WebSocket</pre>
+  <h3>Parceiros Bancários — Adapter Pattern</h3>
+  <table>
+    <thead><tr><th>Item</th><th>v1 (atual)</th><th>v2+</th></tr></thead>
+    <tbody>
+      <tr><td><code>BankPartnerInterface</code> + factory</td><td>✓ Implementado</td><td>—</td></tr>
+      <tr><td><code>PJBankService</code> (adapter)</td><td>✓ Único ativo</td><td>—</td></tr>
+      <tr><td>UI de gestão de parceiros</td><td>—</td><td>✓</td></tr>
+      <tr><td>Novos adapters (Bradesco, Sicredi…)</td><td>—</td><td>✓</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 3 -->
+<h2 class="sec" onclick="toggle(this)">3. Visão em Camadas</h2>
+<div class="sec-body">
+  <p>Diagrama das camadas da aplicação, domínios de negócio e dependências de infraestrutura externa.</p>
+  <div class="diagram"><svg id="portoSvg" width="856" height="500" viewBox="0 0 856 500"></svg></div>
+</div>
+
+<!-- 4 -->
+<h2 class="sec" onclick="toggle(this)">4. Fluxo de Emissão de Boleto</h2>
+<div class="sec-body">
+  <p>Sequência detalhada desde a requisição do tenant até a confirmação de registro, notificações e AR Digital.</p>
+  <div class="diagram"><svg id="seqSvg"></svg></div>
+</div>
+
+<!-- 5 -->
+<h2 class="sec" onclick="toggle(this)">5. Ciclo Completo do Boleto</h2>
+<div class="sec-body">
+  <p>Visão resumida do fluxo bidirecional — da emissão pelo tenant até a confirmação de leitura e pagamento.</p>
+  <div class="diagram"><svg id="cicloSvg"></svg></div>
+</div>
+
+<!-- 6 -->
+<h2 class="sec" onclick="toggle(this)">6. Camadas por Cenário</h2>
+<div class="sec-body">
+  <p>Visão vertical do processamento para os três cenários principais de operação da plataforma.</p>
+  <div class="cenarios">
+    <div class="cen-col">
+      <div class="cen-head blue">Emissão de Boleto</div>
+      <div class="cen-step"><span class="cen-label">SEFAZ / Tenant</span><span class="cen-detail">POST /api/v1/boletos · API Key</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">FormRequest + DTO</span><span class="cen-detail">Validação PT-BR · IssueBoletoData</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">BoletoService</span><span class="cen-detail">Regras de negócio · SplitService</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">PJBankService (Adapter)</span><span class="cen-detail">BankPartnerInterface · v1</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">PJBank API</span><span class="cen-detail">Registro + número + código barras</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">PostgreSQL</span><span class="cen-detail">Salva boleto + splits_snapshot</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">Dispatch Jobs → Redis</span><span class="cen-detail">Notificação · AR Digital (se ativo)</span></div>
+    </div>
+    <div class="cen-col">
+      <div class="cen-head purple">AR Digital</div>
+      <div class="cen-step"><span class="cen-label">ArDigitalService</span><span class="cen-detail">Verifica config · cria notification</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">SendEmailJob</span><span class="cen-detail">E-mail com pixel + link landing</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">Destinatário lê e-mail</span><span class="cen-detail">GET /ar/pixel/{token} → lido</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">ArTrackingService</span><span class="cen-detail">Registra evento · hash SHA-256</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">ApplyRfc3161TimestampJob</span><span class="cen-detail">TSQ → ACT ICP-Brasil → TSR</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">CPF confirmado</span><span class="cen-detail">POST /ar/boleto/{token}/confirmar</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">GenerateArEvidencePdfJob</span><span class="cen-detail">Laudo PDF completo → MinIO</span></div>
+    </div>
+    <div class="cen-col">
+      <div class="cen-head green">Confirmação de Pagamento</div>
+      <div class="cen-step"><span class="cen-label">PJBank Webhook</span><span class="cen-detail">POST /api/webhooks/pjbank (HMAC)</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">HmacWebhookMiddleware</span><span class="cen-detail">Valida assinatura HMAC-SHA256</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">ReconciliationService</span><span class="cen-detail">Concilia pagamento vs DB</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">PostgreSQL</span><span class="cen-detail">Atualiza status boleto + splits</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">WebhookDeliveryService</span><span class="cen-detail">Retry + HMAC para tenant</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">Tenant recebe webhook</span><span class="cen-detail">POST (HMAC) → SEFAZ / Tenant</span></div>
+      <div class="cen-arrow">↓</div>
+      <div class="cen-step"><span class="cen-label">NotificationService</span><span class="cen-detail">E-mail + WhatsApp de confirmação</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 7 -->
+<h2 class="sec" onclick="toggle(this)">7. Módulo AR Digital</h2>
+<div class="sec-body">
+  <p>Add-on por tenant que fornece prova jurídica de entrega e recebimento de boletos, com cadeia de evidências RFC 3161 ICP-Brasil e laudo PDF.</p>
+  <h3>Tabelas</h3>
+  <table>
+    <thead><tr><th>Tabela</th><th>Propósito</th></tr></thead>
+    <tbody>
+      <tr><td><code>ar_digital_configs</code></td><td>Configuração por tenant — enabled, pixel_tracking, cpf_confirmation, act_provider</td></tr>
+      <tr><td><code>ar_digital_notifications</code></td><td>Uma por boleto com AR ativo — token UUID, status, hash do documento</td></tr>
+      <tr><td><code>ar_digital_events</code></td><td>Cada evento rastreado (envio, entrega, abertura, confirmação, bounce)</td></tr>
+      <tr><td><code>ar_digital_timestamps</code></td><td>Carimbo RFC 3161 por evento — TSR base64, provedor ACT, hash_input</td></tr>
+    </tbody>
+  </table>
+  <h3>Progressão de Status</h3>
+  <div class="card">
+    <code>enviado → entregue → lido → confirmado</code> &nbsp;(progressão normal)<br>
+    <code>enviado → bounce</code> &nbsp;(falha de entrega — terminal)
+  </div>
+  <h3>Eventos e Carimbos RFC 3161</h3>
+  <table>
+    <thead><tr><th>#</th><th>Evento</th><th>Gatilho</th><th>Configurável</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>envio</td><td>E-mail despachado pelo servidor</td><td>Não — sempre</td></tr>
+      <tr><td>2</td><td>entrega_provedor</td><td>DSN SMTP 2xx (servidor aceitou)</td><td>Não — sempre</td></tr>
+      <tr><td>3</td><td>abertura</td><td>Pixel 1×1 carregado no cliente</td><td>Sim — <code>pixel_tracking</code></td></tr>
+      <tr><td>4</td><td>confirmacao_cpf</td><td>Contribuinte confirma CPF na landing</td><td>Sim — <code>cpf_confirmation</code></td></tr>
+    </tbody>
+  </table>
+  <h3>Jobs</h3>
+  <table>
+    <thead><tr><th>Job</th><th>Trigger</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td><code>ApplyRfc3161TimestampJob</code></td><td>A cada evento</td><td>Carimbo RFC 3161 via ACT ICP-Brasil (ou stub em dev)</td></tr>
+      <tr><td><code>GenerateArEvidencePdfJob</code></td><td>120s após emissão; imediato ao terminal</td><td>Gera laudo PDF com evidências, salva no MinIO</td></tr>
+      <tr><td><code>ProcessSmtpDsnJob</code></td><td>Webhook DSN SMTP</td><td>Processa retorno de entrega ou bounce</td></tr>
+    </tbody>
+  </table>
+  <h3>Rotas Públicas</h3>
+  <table>
+    <thead><tr><th>Método</th><th>Rota</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/ar/pixel/{token}</code></td><td>Pixel 1×1 — registra abertura</td></tr>
+      <tr><td><code>GET</code></td><td><code>/ar/boleto/{token}</code></td><td>Landing page — exibe boleto ao destinatário</td></tr>
+      <tr><td><code>POST</code></td><td><code>/ar/boleto/{token}/confirmar</code></td><td>Confirmação de recebimento via CPF</td></tr>
+      <tr><td><code>POST</code></td><td><code>/api/webhooks/smtp-dsn</code></td><td>DSN SMTP (entrega ou bounce)</td></tr>
+      <tr><td><code>GET/POST</code></td><td><code>/api/webhooks/meta-whatsapp</code></td><td>Verificação + eventos delivered/read WhatsApp</td></tr>
+    </tbody>
+  </table>
+  <h3>Status</h3>
+  <div class="g2">
+    <div class="card green">
+      <div class="card-title">✓ Implementado — Fases 1–10 (Jul 2026)</div>
+      4 tabelas · 4 services · 3 jobs · laudo PDF DomPDF + QR code · carimbos RFC 3161 com stub para dev.
+    </div>
+    <div class="card amber">
+      <div class="card-title">⏳ Pendências externas</div>
+      Contratar ACT ICP-Brasil (Serpro, BRy, Soluti ou Certisign).<br>
+      Aprovar template <code>boleto_notificacao</code> no Meta via ouvimosvc.com.br.
+    </div>
+  </div>
+</div>
+
+<!-- 8 -->
+<h2 class="sec" onclick="toggle(this)">8. Decisões Arquiteturais</h2>
+<div class="sec-body">
+  <table>
+    <thead><tr><th>Decisão</th><th>Escolha</th><th>Motivo</th></tr></thead>
+    <tbody>
+      <tr><td>Nomes de tabelas</td><td><code>$table</code> explícito</td><td><code>*History</code>, <code>*Daily</code> — Laravel infere plural incorreto</td></tr>
+      <tr><td>Valores monetários</td><td>Inteiros em centavos</td><td>Evita ponto flutuante; <code>DECIMAL(12,2)</code> no DB</td></tr>
+      <tr><td>Deleção</td><td>Soft-delete (<code>SoftDeletes</code>)</td><td>Histórico para auditoria e LGPD</td></tr>
+      <tr><td>Snapshot de emissão</td><td><code>config_snapshot</code> + <code>splits_snapshot</code> JSON</td><td>Imutabilidade histórica (RN-06)</td></tr>
+      <tr><td>Auth API (tenants)</td><td>API Key via middleware customizado</td><td>Escopos + limites granulares por key</td></tr>
+      <tr><td>Auth backoffice</td><td>Laravel session + TOTP</td><td>2FA obrigatório</td></tr>
+      <tr><td>Filas</td><td>Laravel Queues + Redis + Horizon</td><td>Nativo, monitoramento via Horizon</td></tr>
+      <tr><td>Real-time</td><td>Laravel Reverb</td><td>WebSocket nativo, zero infra extra</td></tr>
+      <tr><td>WhatsApp</td><td>Meta Cloud API (ouvimosvc.com.br BSP)</td><td>Padrão homologado — elimina risco de bloqueio</td></tr>
+      <tr><td>PDF</td><td>DomPDF + <code>bacon/bacon-qr-code</code></td><td>Já instalado; gera PDF A4 com QR code SVG</td></tr>
+      <tr><td>CPF no AR Digital</td><td>Hash SHA-256 irreversível</td><td>LGPD: dado pessoal nunca em texto claro</td></tr>
+      <tr><td>ACT em dev</td><td>Stub JSON base64 (<code>act_provider=stub-dev</code>)</td><td>Dev sem ACT real; flag <code>_stub:true</code> distingue produção</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 9 -->
+<h2 class="sec" onclick="toggle(this)">9. Integrações Externas</h2>
+<div class="sec-body">
+  <table>
+    <thead><tr><th>Sistema</th><th>Protocolo</th><th>Direção</th><th>Finalidade</th></tr></thead>
+    <tbody>
+      <tr><td>PJBank API</td><td>REST HTTPS</td><td>Payproxy → PJBank</td><td>Emissão, registro, consulta de boletos</td></tr>
+      <tr><td>PJBank Webhook</td><td>HTTPS POST (HMAC)</td><td>PJBank → Payproxy</td><td>Confirmação de pagamentos</td></tr>
+      <tr><td>Meta Cloud API</td><td>REST HTTPS</td><td>Payproxy → Meta</td><td>Envio de notificações WhatsApp</td></tr>
+      <tr><td>Meta Webhook</td><td>HTTPS POST</td><td>Meta → Payproxy</td><td>Eventos delivered/read WhatsApp</td></tr>
+      <tr><td>SMTP (e-mail)</td><td>SMTP/TLS</td><td>Payproxy → Provedor</td><td>Envio de boletos e notificações AR Digital</td></tr>
+      <tr><td>DSN SMTP</td><td>HTTPS POST</td><td>Provedor → Payproxy</td><td>Confirmação de entrega ou bounce</td></tr>
+      <tr><td>ACT ICP-Brasil</td><td>REST HTTPS (RFC 3161)</td><td>Payproxy → ACT</td><td>Carimbos de tempo com validade jurídica</td></tr>
+      <tr><td>MinIO / S3</td><td>S3 API</td><td>Interna</td><td>Storage de PDFs, laudos, exports</td></tr>
+      <tr><td>Tenant API</td><td>REST HTTPS (API Key)</td><td>SEFAZ → Payproxy</td><td>Emissão de boletos via API pública</td></tr>
+    </tbody>
+  </table>
+  <div class="g2" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title">LGPD</div>
+      CPF/CNPJ em hash SHA-256. Soft-delete obrigatório. Dados em território nacional. <code>CryptoService</code> para dados sensíveis.
+    </div>
+    <div class="card">
+      <div class="card-title">BACEN / FEBRABAN</div>
+      CNAB FEBRABAN. DDA (Débito Direto Autorizado). Registro obrigatório de boletos. Split conforme normas BACEN.
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function toggle(h){
+  var b=h.nextElementSibling,closing=!h.classList.contains('closed');
+  h.classList.toggle('closed',closing);
+  b.classList.toggle('closed',closing);
+  if(!closing)b.style.maxHeight=b.scrollHeight+'px';
+}
+function toggleAll(close){
+  document.querySelectorAll('h2.sec').forEach(function(h){
+    var b=h.nextElementSibling;
+    h.classList.toggle('closed',close);
+    b.classList.toggle('closed',close);
+    if(!close)b.style.maxHeight=b.scrollHeight+'px';
+  });
+}
+
+// ── Porto Layers ──
+(function(){
+  var svg=document.getElementById('portoSvg');
+  function r(x,y,w,h,fill,rx,stroke){
+    var e=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    [['x',x],['y',y],['width',w],['height',h],['fill',fill],['rx',rx||0]].forEach(function(a){e.setAttribute(a[0],a[1]);});
+    if(stroke){e.setAttribute('stroke',stroke);e.setAttribute('stroke-width',1.5);}
+    svg.appendChild(e);
+  }
+  function t(x,y,txt,st){
+    txt.split('\n').forEach(function(l,i){
+      var e=document.createElementNS('http://www.w3.org/2000/svg','text');
+      e.setAttribute('x',x);e.setAttribute('y',y+i*14);
+      e.setAttribute('text-anchor','middle');e.setAttribute('dominant-baseline','middle');
+      if(st)e.setAttribute('style',st);e.textContent=l;svg.appendChild(e);
+    });
+  }
+  var defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  var mk=document.createElementNS('http://www.w3.org/2000/svg','marker');
+  mk.setAttribute('id','pa2');mk.setAttribute('markerWidth','8');mk.setAttribute('markerHeight','6');
+  mk.setAttribute('refX','6');mk.setAttribute('refY','3');mk.setAttribute('orient','auto');
+  var pp=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  pp.setAttribute('points','0 0,6 3,0 6');pp.setAttribute('fill','#1a6fb5');
+  mk.appendChild(pp);defs.appendChild(mk);svg.appendChild(defs);
+
+  r(0,0,856,428,'#FAF0D6',14);
+  t(428,20,'PAYPROXY — Plataforma','font-size:11pt;font-weight:700;fill:#5a3e00');
+  r(12,36,832,314,'#C8DC8A',10);
+  t(428,54,'Camada de Negócio (app/Services · app/Http · app/Jobs)','font-size:9pt;font-weight:700;fill:#3a5a00');
+
+  [{x:24,lbl:'Emissão & Split'},{x:300,lbl:'AR Digital'},{x:576,lbl:'Notificações'}].forEach(function(s){
+    r(s.x,64,264,276,'#AAE0F4',8);
+    t(s.x+132,82,s.lbl,'font-size:9pt;font-weight:700;fill:#0a3a5a');
+  });
+
+  [{x:34,y:98,w:244,h:36,l:'BoletoService + SplitService'},
+   {x:34,y:142,w:244,h:36,l:'BankPartnerInterface'},
+   {x:34,y:186,w:244,h:36,l:'PJBankService (Adapter v1)'},
+   {x:34,y:230,w:244,h:36,l:'WebhookDeliveryService'},
+   {x:34,y:274,w:244,h:36,l:'ReconciliationService'},
+   {x:310,y:98,w:244,h:36,l:'ArDigitalService'},
+   {x:310,y:142,w:244,h:36,l:'ArTrackingService'},
+   {x:310,y:186,w:244,h:36,l:'Rfc3161TimestampService'},
+   {x:310,y:230,w:244,h:36,l:'ArEvidencePdfService'},
+   {x:310,y:274,w:244,h:36,l:'Jobs: Timestamp + PDF'},
+   {x:586,y:98,w:244,h:36,l:'NotificationService'},
+   {x:586,y:142,w:244,h:36,l:'SendWhatsAppJob'},
+   {x:586,y:186,w:244,h:36,l:'SendEmailJob'},
+   {x:586,y:230,w:244,h:36,l:'SmtpDsnController'},
+   {x:586,y:274,w:244,h:36,l:'MetaWhatsAppWebhookController'},
+  ].forEach(function(c){
+    r(c.x,c.y,c.w,c.h,'#F4C0B0',6,'#d08070');
+    t(c.x+c.w/2,c.y+c.h/2,c.l,'font-size:8.5pt;fill:#3a1a0a');
+  });
+
+  r(12,358,832,54,'#B0C870',8);
+  t(428,385,'Infraestrutura — PostgreSQL · Redis · MinIO · Nginx · Docker Compose','font-size:9.5pt;font-weight:700;fill:#2a4a00');
+
+  [{x:26,lbl:'PJBank API',cx:112},
+   {x:192,lbl:'ACT ICP-Brasil\n(BRy/Serpro)',cx:278},
+   {x:358,lbl:'Meta Cloud API\n(WhatsApp)',cx:444},
+   {x:524,lbl:'MinIO / S3\nStorage',cx:610,col:'#C8DC8A'},
+   {x:690,lbl:'Laravel\nFramework',cx:776,col:'#D4C8E8'}
+  ].forEach(function(pk){
+    r(pk.x,436,160,52,pk.col||'#C4A8D8',8);
+    t(pk.cx,462,pk.lbl,'font-size:8.5pt;font-weight:700;fill:#2a1a4a');
+    var ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    [['x1',pk.cx],['y1','436'],['x2',pk.cx],['y2','414'],['stroke','#1a6fb5'],['stroke-width','2'],['stroke-dasharray','6 4'],['marker-end','url(#pa2)']].forEach(function(a){ln.setAttribute(a[0],a[1]);});
+    svg.appendChild(ln);
+  });
+})();
+
+// ── Sequence Diagram ──
+(function(){
+  var el=document.getElementById('seqSvg');
+  var C={PAD_T:20,PAD_L:28,ACT_W:118,ACT_GAP:28,BOX_H:48,BOX_R:7,MSG_H:40};
+  var actors=[
+    {l:'SEFAZ\n/ Tenant',c:'#334155',b:'#F1F5F9'},
+    {l:'Payproxy\nAPI',c:'#1D5FA8',b:'#EFF6FF'},
+    {l:'PJBank\nAPI',c:'#B45309',b:'#FFFBEB'},
+    {l:'Fila\n(Redis)',c:'#6D28D9',b:'#F5F3FF'},
+    {l:'Contribuinte\n(e-mail/WA)',c:'#15803D',b:'#F0FDF4'},
+  ];
+  var msgs=[
+    {f:0,t:1,l:'POST /boletos (API Key)',ty:'solid'},
+    {f:1,t:1,l:'Validação + DTO',ty:'self'},
+    {f:1,t:2,l:'Registrar boleto (PJBank API)',ty:'solid'},
+    {f:2,t:1,l:'Número + link + código barras',ty:'ret'},
+    {f:1,t:1,l:'Calcular splits + salvar DB',ty:'self'},
+    {f:1,t:3,l:'Dispatch NotificacaoJob',ty:'solid'},
+    {f:1,t:0,l:'201 Created — BoletoResource',ty:'ret'},
+    {f:3,t:4,l:'Enviar e-mail + WhatsApp',ty:'solid'},
+    {f:3,t:3,l:'ApplyRfc3161TimestampJob',ty:'self'},
+    {f:4,t:1,l:'GET /ar/pixel/{token}',ty:'ret'},
+    {f:4,t:1,l:'POST /ar/boleto/{token}/confirmar',ty:'ret'},
+    {f:2,t:1,l:'Webhook: pagamento recebido',ty:'ret'},
+    {f:1,t:3,l:'Dispatch WebhookDeliveryJob',ty:'solid'},
+    {f:3,t:0,l:'POST webhook (HMAC) — pago',ty:'ret'},
+  ];
+  var nA=actors.length;
+  var totalW=C.PAD_L*2+nA*C.ACT_W+(nA-1)*C.ACT_GAP;
+  var selfN=msgs.filter(function(m){return m.ty==='self';}).length;
+  var totalH=C.PAD_T+C.BOX_H+msgs.length*C.MSG_H+selfN*12+C.BOX_H+20;
+  el.setAttribute('width',totalW);el.setAttribute('height',totalH);
+  el.setAttribute('viewBox','0 0 '+totalW+' '+totalH);
+
+  function cx(i){return C.PAD_L+i*(C.ACT_W+C.ACT_GAP)+C.ACT_W/2;}
+  function se(tag,attrs,txt){
+    var e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
+    if(txt!==undefined)e.textContent=txt;return e;
+  }
+  function txt2(x,y,s,st){
+    s.split('\n').forEach(function(l,i){el.appendChild(se('text',{x:x,y:y+i*14,'text-anchor':'middle','dominant-baseline':'middle',style:st||'font-size:8pt;fill:#1a1a1a'},l));});
+  }
+
+  var defs=se('defs',{});
+  [{id:'arr',col:'#1D5FA8'},{id:'arrR',col:'#6D28D9'}].forEach(function(m){
+    var mk=se('marker',{id:m.id,markerWidth:'8',markerHeight:'6',refX:'7',refY:'3',orient:'auto'});
+    mk.appendChild(se('polygon',{points:'0 0,8 3,0 6',fill:m.col}));defs.appendChild(mk);
+  });
+  el.appendChild(defs);
+
+  var msgY=C.PAD_T+C.BOX_H;
+  var phY=[];
+  msgs.forEach(function(m){phY.push(msgY);if(m.ty==='self')msgY+=C.MSG_H+12;else msgY+=C.MSG_H;});
+
+  [{s:0,e:6,col:'#EFF6FF',lbl:'Emissão & Registro'},
+   {s:7,e:10,col:'#F0FDF4',lbl:'Notificação & AR Digital'},
+   {s:11,e:13,col:'#FEF9C3',lbl:'Pagamento & Webhook'}
+  ].forEach(function(ph){
+    var y0=phY[ph.s],y1=ph.e+1<msgs.length?phY[ph.e+1]:totalH-C.BOX_H-20;
+    el.appendChild(se('rect',{x:0,y:y0,width:totalW,height:y1-y0,fill:ph.col,opacity:'0.45'}));
+    el.appendChild(se('text',{x:totalW-4,y:y0+12,'text-anchor':'end',style:'font-size:7.5pt;fill:#666;font-style:italic'},ph.lbl));
+  });
+
+  var lifeTop=C.PAD_T+C.BOX_H,lifeBot=totalH-20-C.BOX_H;
+  actors.forEach(function(a,i){
+    var x=C.PAD_L+i*(C.ACT_W+C.ACT_GAP);
+    el.appendChild(se('rect',{x:x,y:C.PAD_T,width:C.ACT_W,height:C.BOX_H,rx:C.BOX_R,fill:a.b,stroke:a.c,'stroke-width':'2'}));
+    txt2(cx(i),C.PAD_T+C.BOX_H/2,a.l,'font-size:8pt;font-weight:700;fill:'+a.c);
+    el.appendChild(se('line',{x1:cx(i),y1:lifeTop,x2:cx(i),y2:lifeBot,stroke:'#ccd6e0','stroke-width':'1','stroke-dasharray':'5 4'}));
+  });
+
+  msgY=C.PAD_T+C.BOX_H;
+  msgs.forEach(function(m){
+    var y=msgY+C.MSG_H/2;
+    if(m.ty==='self'){
+      var rx=cx(m.f)+32;
+      el.appendChild(se('path',{d:'M'+cx(m.f)+' '+y+' Q'+rx+' '+y+' '+rx+' '+(y+10)+' Q'+rx+' '+(y+20)+' '+cx(m.f)+' '+(y+20),stroke:'#6D28D9','stroke-width':'1.5',fill:'none','stroke-dasharray':'4 2','marker-end':'url(#arrR)'}));
+      el.appendChild(se('text',{x:rx+6,y:y+10,'dominant-baseline':'middle',style:'font-size:8pt;fill:#6D28D9;font-style:italic'},m.l));
+      msgY+=C.MSG_H+12;
+    }else{
+      var isR=(m.ty==='ret');
+      var sx=isR?cx(m.t):cx(m.f),ex=isR?cx(m.f):cx(m.t);
+      el.appendChild(se('line',{x1:sx,y1:y,x2:ex,y2:y,stroke:isR?'#6D28D9':'#1D5FA8','stroke-width':isR?'1.5':'2','stroke-dasharray':isR?'5 3':'none','marker-end':'url(#'+(isR?'arrR':'arr')+')'}));
+      el.appendChild(se('text',{x:(sx+ex)/2,y:y-5,'text-anchor':'middle',style:'font-size:8pt;fill:'+(isR?'#6D28D9':'#1D5FA8')},m.l));
+      msgY+=C.MSG_H;
+    }
+  });
+
+  actors.forEach(function(a,i){
+    var x=C.PAD_L+i*(C.ACT_W+C.ACT_GAP);
+    el.appendChild(se('rect',{x:x,y:lifeBot,width:C.ACT_W,height:C.BOX_H,rx:C.BOX_R,fill:a.b,stroke:a.c,'stroke-width':'2'}));
+    txt2(cx(i),lifeBot+C.BOX_H/2,a.l,'font-size:8pt;font-weight:700;fill:'+a.c);
+  });
+})();
+
+// ── Ciclo Vertical ──
+(function(){
+  var svg=document.getElementById('cicloSvg');
+  var NODES=[
+    {n:'SEFAZ / Tenant',d:'Emissor de boletos',c:'#334155',b:'#F1F5F9'},
+    {n:'Payproxy',d:'Plataforma intermediária',c:'#1D5FA8',b:'#EFF6FF'},
+    {n:'PJBank',d:'Banco parceiro (v1)',c:'#C2410C',b:'#FFF7ED'},
+    {n:'Contribuinte',d:'Devedor / Pagador',c:'#15803D',b:'#F0FDF4'},
+    {n:'BRy ICP-Brasil',d:'Autoridade de carimbo RFC 3161',c:'#6D28D9',b:'#F5F3FF'},
+  ];
+  var LINKS=[
+    {dl:'Emite boleto (API Key)',ul:'Boleto + código + PIX',dc:'#1D5FA8',uc:'#334155'},
+    {dl:'Registra + distribui split',ul:'Número + link do boleto',dc:'#C2410C',uc:'#1D5FA8'},
+    {dl:'E-mail + WhatsApp',ul:'Leitura (pixel) + confirmação CPF',dc:'#15803D',uc:'#C2410C'},
+    {dl:'TSQ — Timestamp Query',ul:'TSR assinado — ICP-Brasil',dc:'#6D28D9',uc:'#15803D'},
+  ];
+  var BW=160,BH=56,GAP=72,CX=220,DX=CX-22,UX=CX+22,N=NODES.length;
+  var totalH=30+N*BH+(N-1)*GAP+40;
+  svg.setAttribute('width','500');svg.setAttribute('height',totalH);svg.setAttribute('viewBox','0 0 500 '+totalH);
+
+  var defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  function mkM(id,col){
+    var m=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    m.setAttribute('id',id);m.setAttribute('markerWidth','8');m.setAttribute('markerHeight','6');
+    m.setAttribute('refX','7');m.setAttribute('refY','3');m.setAttribute('orient','auto');
+    var p=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    p.setAttribute('points','0 0,8 3,0 6');p.setAttribute('fill',col);m.appendChild(p);defs.appendChild(m);
+  }
+  NODES.forEach(function(n,i){if(LINKS[i])mkM('cd'+i,LINKS[i].dc);});
+  NODES.forEach(function(n,i){if(i>0&&LINKS[i-1])mkM('cu'+i,LINKS[i-1].uc);});
+  svg.appendChild(defs);
+
+  function el(tag,attrs,txt){
+    var e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
+    if(txt!==undefined)e.textContent=txt;return e;
+  }
+
+  NODES.forEach(function(n,i){
+    var y=30+i*(BH+GAP);
+    svg.appendChild(el('rect',{x:CX-BW/2,y:y,width:BW,height:BH,rx:10,fill:n.b,stroke:n.c,'stroke-width':'2.5'}));
+    svg.appendChild(el('text',{x:CX,y:y+20,'text-anchor':'middle','dominant-baseline':'middle',style:'font-size:9.5pt;font-weight:700;fill:'+n.c},n.n));
+    svg.appendChild(el('text',{x:CX,y:y+40,'text-anchor':'middle','dominant-baseline':'middle',style:'font-size:8pt;fill:#666'},n.d));
+    if(i<N-1&&LINKS[i]){
+      var topY=y+BH,botY=y+BH+GAP,midY=(topY+botY)/2;
+      svg.appendChild(el('line',{x1:DX,y1:topY+2,x2:DX,y2:botY-4,stroke:LINKS[i].dc,'stroke-width':'2','marker-end':'url(#cd'+i+')'}));
+      svg.appendChild(el('text',{x:DX-8,y:midY,'text-anchor':'end','dominant-baseline':'middle',style:'font-size:8pt;fill:'+LINKS[i].dc+';font-weight:600'},LINKS[i].dl));
+      svg.appendChild(el('line',{x1:UX,y1:botY-2,x2:UX,y2:topY+4,stroke:LINKS[i].uc,'stroke-width':'1.5','stroke-dasharray':'5 3','marker-end':'url(#cu'+(i+1)+')'}));
+      svg.appendChild(el('text',{x:UX+8,y:midY,'text-anchor':'start','dominant-baseline':'middle',style:'font-size:8pt;fill:'+LINKS[i].uc+';font-style:italic'},LINKS[i].ul));
+    }
+  });
+  var ly=totalH-16;
+  svg.appendChild(el('line',{x1:20,y1:ly,x2:52,y2:ly,stroke:'#334155','stroke-width':'2'}));
+  svg.appendChild(el('text',{x:57,y:ly,'dominant-baseline':'middle',style:'font-size:8pt;fill:#666'},'IDA (requisição)'));
+  svg.appendChild(el('line',{x1:190,y1:ly,x2:222,y2:ly,stroke:'#6D28D9','stroke-width':'1.5','stroke-dasharray':'5 3'}));
+  svg.appendChild(el('text',{x:227,y:ly,'dominant-baseline':'middle',style:'font-size:8pt;fill:#666'},'VOLTA (resposta)'));
+})();
+
+// Inicializa maxHeight APÓS todos os diagramas estarem desenhados
+document.querySelectorAll('.sec-body').forEach(function(b){b.style.maxHeight=b.scrollHeight+'px';});
+</script>

@@ -1,0 +1,937 @@
+﻿<title>Segurança &amp; LGPD — Recomendações Payproxy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;font-family:'Segoe UI',Arial,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a}
+
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.96);backdrop-filter:blur(4px);border-bottom:1px solid #d0dae8;padding:7px 24px;display:flex;align-items:center;gap:8px;font-size:9pt;flex-wrap:wrap}
+.tb-brand{font-weight:700;color:#1a2a4a;font-size:9.5pt;margin-right:6px}
+.tb-sep{color:#d0dae8;margin:0 6px}
+.tb-lbl{font-size:9pt;color:#555}
+.tb-btn{padding:3px 10px;border:1px solid #ccd6e0;border-radius:4px;background:#fff;cursor:pointer;font-size:8.5pt;color:#1a2a4a;font-family:inherit}
+.tb-btn:hover{background:#f0f4f8}
+.tb-right{margin-left:auto;font-size:8.5pt;color:#888}
+
+.wrap{max-width:900px;margin:0 auto;padding:56px 48px 60px;background:#fff}
+
+.doc-logo{display:flex;justify-content:flex-end;margin-bottom:6px}
+.doc-logo img{height:125px}
+.doc-title-block{margin-bottom:20px}
+.doc-title-block h1{font-size:20pt;font-weight:700;color:#1a2a4a;border-bottom:3px solid #1a6fb5;padding-bottom:8px;margin-bottom:4px}
+.doc-subtitle{font-size:13pt;color:#555}
+
+.meta-info{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:6px;padding:12px 20px;margin-bottom:28px;display:flex;gap:32px;flex-wrap:wrap}
+.mi{display:flex;flex-direction:column}
+.mi-label{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.mi-val{font-weight:600;color:#1a2a4a;font-size:10pt}
+
+h2.sec{font-size:14pt;font-weight:700;color:#1a2a4a;border-bottom:1.5px solid #d0dae8;padding:14px 0 6px;margin-top:32px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+h2.sec::before{content:'▼';font-size:9pt;color:#1a6fb5}
+h2.sec.closed::before{content:'▶'}
+h2.sec.lgpd-head::before{color:#166534}
+.sec-body{overflow:hidden;transition:max-height .35s ease,opacity .25s ease}
+.sec-body.closed{max-height:0!important;opacity:0;pointer-events:none}
+
+h3{font-size:12pt;font-weight:700;color:#1a4a6b;margin:18px 0 8px}
+p{margin:8px 0}
+ul{margin:8px 0 8px 22px;line-height:1.8}
+ol{margin:8px 0 8px 22px;line-height:1.9}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:10pt}
+th{background:#1a2a4a;color:#fff;padding:8px 12px;text-align:left;font-weight:600}
+td{padding:7px 12px;border-bottom:1px solid #ccd6e0;vertical-align:top}
+tr:nth-child(even) td{background:#f5f8fc}
+
+code{font-family:'Consolas','Courier New',monospace;font-size:9pt;background:#f0f4f8;border:1px solid #ccd6e0;border-radius:3px;padding:1px 5px;color:#1a3a5a}
+pre{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:5px;padding:14px 16px;overflow-x:auto;margin:10px 0;font-family:'Consolas','Courier New',monospace;font-size:9pt;color:#1a3a5a;line-height:1.5}
+
+/* Quadrant */
+.quadrant-wrap{margin:24px 0 8px;text-align:center}
+.quadrant-wrap canvas{display:block;margin:0 auto;cursor:crosshair}
+.quadrant-legend{display:flex;justify-content:center;gap:28px;margin-top:10px;font-size:9pt;color:#555;flex-wrap:wrap}
+.leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* Cards */
+.rec-card{border-radius:6px;margin:12px 0;border-left:4px solid #1a6fb5;background:#f7fafd;overflow:hidden}
+.rec-card.lgpd{border-left-color:#166534;background:#f7fdf7}
+.rec-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+.rec-header:hover{background:rgba(0,0,0,0.03)}
+.rec-priority{font-size:14pt;flex-shrink:0}
+.rec-title{font-weight:700;font-size:11pt;color:#1a2a4a;flex:1}
+.rec-badges{display:flex;gap:6px;flex-wrap:wrap}
+.rec-arrow{color:#888;font-size:9pt;flex-shrink:0}
+.rec-body{padding:0 16px 16px}
+
+.badge{padding:2px 8px;border-radius:10px;font-size:8pt;font-weight:600;white-space:nowrap}
+.badge-esf-low{background:#dcfce7;color:#166534}
+.badge-esf-med{background:#fef9c3;color:#92400e}
+.badge-esf-high{background:#fee2e2;color:#991b1b}
+.badge-imp-med{background:#e0f2fe;color:#075985}
+.badge-imp-high{background:#dbeafe;color:#1e40af}
+.badge-imp-vhigh{background:#ede9fe;color:#5b21b6}
+.badge-type-seg{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.badge-type-lgpd{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+
+.rec-desc{font-size:10.5pt;color:#334155;margin:4px 0 14px;padding:10px 14px;background:rgba(255,255,255,0.7);border-radius:4px;border:1px solid rgba(0,0,0,0.07)}
+.why-box{background:#fff;border:1px solid #d0dae8;border-radius:5px;padding:10px 14px;margin:10px 0}
+.why-label{font-size:8pt;text-transform:uppercase;letter-spacing:.07em;color:#888;font-weight:700;margin-bottom:4px}
+.impl-box{margin:10px 0}
+.impl-label{font-size:8pt;text-transform:uppercase;letter-spacing:.07em;color:#888;font-weight:700;margin-bottom:8px}
+.alert-box{background:#fffbeb;border:1px solid #f59e0b;border-radius:5px;padding:10px 14px;margin:10px 0;font-size:10pt}
+.alert-label{font-size:8pt;text-transform:uppercase;letter-spacing:.07em;color:#b45309;font-weight:700;margin-bottom:4px}
+.bonus-box{background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:10px 14px;margin:10px 0;font-size:10pt}
+.bonus-label{font-size:8pt;text-transform:uppercase;letter-spacing:.07em;color:#15803d;font-weight:700;margin-bottom:4px}
+
+/* Priority grid */
+.prior-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:16px 0;border:1px solid #d0dae8;border-radius:8px;overflow:hidden}
+.prior-col{display:flex;flex-direction:column}
+.prior-col-title{padding:10px 14px;font-weight:700;font-size:9.5pt;text-align:center;color:#fff}
+.prior-col.imediato .prior-col-title{background:#dc2626}
+.prior-col.curto .prior-col-title{background:#d97706}
+.prior-col.medio .prior-col-title{background:#16a34a}
+.prior-item{padding:8px 12px;font-size:9pt;border-top:1px solid #d0dae8;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.prior-item-type{font-size:7.5pt;font-weight:700;padding:1px 6px;border-radius:8px}
+.type-seg{background:#eff6ff;color:#1d4ed8}
+.type-lgpd{background:#f0fdf4;color:#15803d}
+
+@media print{
+  .toolbar{display:none}
+  .wrap{padding:20px 30px}
+  .sec-body{max-height:none!important;opacity:1!important}
+  .rec-body{display:block!important}
+  .doc-logo img{height:100px}
+}
+</style>
+
+<div class="toolbar">
+  <span class="tb-brand">🔒 Seg &amp; LGPD</span>
+  <span class="tb-sep">|</span>
+  <span class="tb-lbl">Seções:</span>
+  <button class="tb-btn" onclick="toggleAll(false)">Expandir</button>
+  <button class="tb-btn" onclick="toggleAll(true)">Recolher</button>
+  <span class="tb-sep">|</span>
+  <span class="tb-lbl">Cards:</span>
+  <button class="tb-btn" onclick="toggleCards(false)">Expandir</button>
+  <button class="tb-btn" onclick="toggleCards(true)">Recolher</button>
+  <span class="tb-right">Payproxy · 15 recomendações · Jul 2026</span>
+</div>
+
+<div class="wrap">
+
+<div class="doc-logo">
+  <img src="data:image/png;base64,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" alt="Ciberian">
+</div>
+<div class="doc-title-block">
+  <h1>Segurança &amp; LGPD</h1>
+  <div class="doc-subtitle">Recomendações para a Plataforma Payproxy</div>
+</div>
+
+<div class="meta-info">
+  <div class="mi"><span class="mi-label">Documento</span><span class="mi-val">SEC-001</span></div>
+  <div class="mi"><span class="mi-label">Versão</span><span class="mi-val">1.0</span></div>
+  <div class="mi"><span class="mi-label">Data</span><span class="mi-val">Jul 2026</span></div>
+  <div class="mi"><span class="mi-label">Status</span><span class="mi-val">Revisão</span></div>
+  <div class="mi"><span class="mi-label">Recomendações</span><span class="mi-val">15 itens</span></div>
+  <div class="mi"><span class="mi-label">Categorias</span><span class="mi-val">Segurança · LGPD</span></div>
+</div>
+
+<!-- Quadrant Hero -->
+<h2 class="sec" onclick="toggle(this)">Visão Estratégica — Esforço × Impacto</h2>
+<div class="sec-body">
+  <p>Cada recomendação posicionada por esforço de implementação e impacto esperado. <strong>Passe o mouse</strong> sobre os pontos para detalhes. Os itens no quadrante superior-esquerdo (<em>Quick Wins</em>) são as prioridades imediatas — alto impacto com baixo esforço.</p>
+  <div class="quadrant-wrap">
+    <canvas id="qCanvas" width="804" height="460"></canvas>
+    <div class="quadrant-legend">
+      <span><span class="leg-dot" style="background:#1a6fb5"></span>Segurança da Informação</span>
+      <span><span class="leg-dot" style="background:#166534"></span>LGPD</span>
+      <span style="color:#dc2626;font-weight:600">● Imediato</span>
+      <span style="color:#d97706;font-weight:600">● Curto prazo</span>
+      <span style="color:#16a34a;font-weight:600">● Médio prazo</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SEGURANÇA
+═══════════════════════════════════════════════════════ -->
+<h2 class="sec" onclick="toggle(this)">Segurança da Informação</h2>
+<div class="sec-body">
+
+  <!-- 1. Security Headers -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🔴</span>
+      <span class="rec-title">Security Headers HTTP</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-low">Esforço Baixo</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Cabeçalhos HTTP que instruem o browser a aplicar políticas de segurança — proteção contra XSS, clickjacking, MIME sniffing e vazamento de referrer. Um único middleware resolve tudo.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        São gratuitos (zero custo de performance, sem dependências externas), cobrem boa parte do OWASP Top 10 e são verificados em qualquer pentest ou auditoria de segurança contratada pela SEFAZ. Não implementar é deixar vulnerabilidades triviais abertas sem motivo.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Headers a implementar</div>
+        <pre>Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: geolocation=(), microphone=(), camera=()</pre>
+        <p>Um único <code>SecurityHeadersMiddleware</code> registrado globalmente. O <code>Content-Security-Policy</code> exige atenção para não quebrar o Vue/Inertia — precisa ajuste fino nos <code>script-src</code> para assets do Vite.</p>
+      </div>
+      <div class="bonus-box">
+        <div class="bonus-label">Bônus de auditoria</div>
+        Após implementar, testar em <strong>securityheaders.com</strong> — nota A ou A+ é alcançável e demonstrável para a SEFAZ em qualquer auditoria de segurança. É uma evidência objetiva e visual.
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Audit Log -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🔴</span>
+      <span class="rec-title">Audit Log Centralizado</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-vhigh">Impacto Muito Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Registro imutável de toda ação relevante no sistema — quem acessou, o que alterou, quando e de onde. Base de qualquer investigação de incidente ou resposta a auditoria.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Sem audit log, um incidente de segurança ou uma disputa contratual com a SEFAZ se torna inauditável. Também é exigido implicitamente pela LGPD (Art. 37 — responsabilização e prestação de contas). É a primeira coisa que qualquer perito forense solicita.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">O que registrar</div>
+        <ul>
+          <li><strong>Backoffice:</strong> login, logout, falhas de autenticação, toda alteração de dados (tenant criado/editado, configuração AR alterada, API key gerada/revogada)</li>
+          <li><strong>API:</strong> cada chamada de emissão de boleto — tenant, IP, timestamp, payload resumido</li>
+          <li><strong>Webhooks recebidos:</strong> origem, status de validação HMAC, payload resumido</li>
+          <li><strong>Acessos sensíveis:</strong> downloads de laudos PDF, visualização de dados de contribuintes</li>
+        </ul>
+        <div class="impl-label" style="margin-top:14px">Schema da tabela</div>
+        <pre>audit_logs:
+  user_id, tenant_id, action, entity_type, entity_id
+  old_values (JSON), new_values (JSON)
+  ip_address, user_agent, created_at
+
+-- Arquivos principais:
+app/Models/AuditLog.php
+app/Http/Middleware/AuditMiddleware.php   ← captura HTTP requests
+app/Observers/TenantObserver.php          ← captura eventos Eloquent
+app/Services/AuditService.php            ← API para registrar eventos custom</pre>
+      </div>
+      <div class="alert-box">
+        <div class="alert-label">⚠ Requisito crítico — Append-Only</div>
+        A tabela de audit log deve ser <strong>append-only</strong>: sem <code>updated_at</code>, sem soft-delete, sem UPDATE possível via ORM. Em produção, o usuário de banco que a aplicação usa não deve ter permissão de <code>DELETE</code>/<code>UPDATE</code> nessa tabela. Se o log puder ser alterado, perde valor jurídico.
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Rate Limiting -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Rate Limiting Granular por Tenant</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-low">Esforço Baixo</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Controle de quantas requisições cada tenant pode fazer por endpoint por janela de tempo, usando Redis como contador — infra já disponível no projeto.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Um tenant com bug em produção (loop de emissão) ou mal-intencionado pode derrubar a performance para todos os outros. Com 341k boletos/mês da SEFAZ, um pico inesperado pode comprometer o SLA contratual. Redis já está no stack — é configuração, não nova infraestrutura.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Limites sugeridos por endpoint</div>
+        <table>
+          <thead><tr><th>Endpoint</th><th>Limite</th><th>Janela</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/v1/boletos</code></td><td>200 req</td><td>por minuto / tenant</td></tr>
+            <tr><td><code>POST /api/v1/boletos/batch</code></td><td>10 req</td><td>por minuto / tenant</td></tr>
+            <tr><td><code>GET /api/v1/boletos/{id}</code></td><td>500 req</td><td>por minuto / tenant</td></tr>
+            <tr><td><code>POST /auth/login</code></td><td>5 tentativas</td><td>15 min / IP</td></tr>
+            <tr><td><code>GET /api/v1/relatorios</code></td><td>10 req</td><td>por minuto / tenant</td></tr>
+          </tbody>
+        </table>
+        <div class="impl-label" style="margin-top:14px">Headers de resposta informativos</div>
+        <p>O diferencial é usar a <strong>API Key como chave do limitador</strong> (não o IP), com headers informativos na resposta — o tenant sabe exatamente onde está dentro do limite:</p>
+        <pre>X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 147
+X-RateLimit-Reset: 1720900860   ← epoch Unix de quando o limite reseta
+Retry-After: 43                 ← segundos até poder tentar novamente (só no 429)</pre>
+        <p>Quando estourar: HTTP <code>429</code> com corpo JSON documentado no Swagger, não apenas erro genérico.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. IP Allowlist -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">IP Allowlist por Tenant</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-low">Esforço Baixo</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Cada tenant cadastra no backoffice os IPs ou faixas CIDR autorizados a chamar a API. Requisições de IPs fora da lista são bloqueadas no middleware antes de chegar ao controller.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Se uma API Key vazar, o atacante ainda precisa vir do IP autorizado — segunda camada de defesa. Para a SEFAZ especificamente, os servidores que emitem boletos têm IPs fixos e conhecidos — é natural e esperado restringir. Campo <strong>opcional</strong>: sem IPs cadastrados, não aplica restrição (compatibilidade com tenants menores sem IP fixo).
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Implementação</div>
+        <pre>-- Campo na tabela tenants:
+tenants.allowed_ips (JSON: ["177.xx.xx.xx", "10.0.0.0/24"])
+
+-- Middleware:
+app/Http/Middleware/TenantIpAllowlistMiddleware.php</pre>
+        <p>Suporte a CIDR (<code>10.0.0.0/24</code>) além de IPs exatos, para tenants com faixas de IP corporativas. Quando viola: HTTP <code>403</code> com registro no audit log informando o IP bloqueado e a API Key utilizada.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Rotação API Keys -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Rotação Automática de API Keys</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-med">Impacto Médio</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">API Keys com validade configurável (ex: 90, 180 dias ou sem expiração) e notificação automática antes do vencimento, com período de overlap para transição sem downtime.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Credenciais que nunca expiram são uma vulnerabilidade permanente. Se uma key vazou há 6 meses sem ser detectada, o atacante teve acesso por 6 meses. Com rotação, a janela de exposição de qualquer credencial comprometida é limitada ao período de validade.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Fluxo completo de rotação</div>
+        <ol>
+          <li>Admin do tenant gera nova key com validade definida no backoffice</li>
+          <li><strong>15 dias antes de expirar:</strong> e-mail de aviso via <code>NotificationService</code></li>
+          <li><strong>7 dias antes:</strong> segundo aviso com link direto para gerar nova key</li>
+          <li><strong>No dia da expiração:</strong> key desativada automaticamente (scheduler)</li>
+          <li><strong>Período de overlap (48h):</strong> tenant pode ter nova e antiga válidas simultaneamente durante transição, sem interrupção de serviço</li>
+        </ol>
+        <pre>-- Campos na tabela api_keys:
+api_keys.expires_at       (nullable timestamp)
+api_keys.status           (active | expiring_soon | expired | revoked)
+api_keys.last_used_at     (timestamp)
+api_keys.last_used_ip     (varchar)
+
+-- Jobs (scheduler diário):
+app/Jobs/NotifyExpiringApiKeysJob.php
+app/Jobs/ExpireApiKeysJob.php</pre>
+      </div>
+      <div class="bonus-box">
+        <div class="bonus-label">Bônus — Detecção de keys ociosas</div>
+        Registrar <code>last_used_at</code> + <code>last_used_ip</code> permite identificar keys que não são usadas há muito tempo e desativá-las proativamente — reduz superfície de ataque sem ação manual do tenant.
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Secrets Management -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟢</span>
+      <span class="rec-title">Secrets Management (Vault)</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-high">Esforço Alto</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Em vez de guardar credenciais sensíveis no <code>.env</code> (PJBank token, Meta access token, senhas ACT ICP-Brasil), elas ficam num cofre criptografado como HashiCorp Vault ou AWS Secrets Manager. A aplicação busca em runtime.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Arquivo <code>.env</code> em produção é copiado em backups, versionado acidentalmente, acessível a qualquer dev com acesso ao servidor. Em uma plataforma com dados fiscais de 341k contribuintes da SEFAZ, isso é inaceitável em qualquer auditoria séria de segurança.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Benefícios concretos</div>
+        <ul>
+          <li><strong>Rotação sem redeploy:</strong> credenciais trocadas no Vault aplicam imediatamente, sem reiniciar a aplicação</li>
+          <li><strong>Acesso auditado:</strong> quem buscou qual secret e quando — trilha completa</li>
+          <li><strong>Secrets por ambiente:</strong> dev/staging/prod com acesso segmentado — desenvolvedor nunca vê as credenciais de prod</li>
+          <li><strong>Revogação imediata:</strong> credencial comprometida revogada no Vault em segundos, sem alterar código ou fazer deploy</li>
+        </ul>
+        <div class="impl-label" style="margin-top:14px">Opções para Payproxy</div>
+        <ul>
+          <li><strong>HashiCorp Vault:</strong> on-premise ou cloud, open source, integração via <code>AppServiceProvider</code> no boot</li>
+          <li><strong>AWS Secrets Manager:</strong> se hospedado na AWS — a instância EC2/ECS tem IAM Role e busca secrets sem credenciais no <code>.env</code></li>
+        </ul>
+        <p>Credenciais a migrar: PJBank token, Meta WhatsApp access token, ACT ICP-Brasil passwords (BRy, Soluti, Certisign), chaves de criptografia LGPD do <code>CryptoService</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. mTLS -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟢</span>
+      <span class="rec-title">mTLS nos Webhooks Recebidos</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-med">Impacto Médio</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Autenticação mútua TLS (mTLS) — além de validar o HMAC do payload, o servidor Payproxy também valida o certificado TLS de quem está entregando o webhook. Dupla camada de autenticação.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        HMAC protege a <em>integridade do payload</em>, mas não autentica o canal de transporte. Um atacante que consiga forjar um payload HMAC válido (por força bruta ou vazamento do secret) ainda seria barrado pelo mTLS. Garante que a conexão TCP/TLS vem de fato da infraestrutura do PJBank.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Como funciona</div>
+        <p>PJBank apresenta um certificado cliente ao fazer o POST de webhook. Nginx valida esse certificado contra o CA do PJBank antes de encaminhar a requisição ao Laravel. A aplicação não muda — a validação é transparente na camada de transporte:</p>
+        <pre>-- nginx.conf (bloco do servidor Payproxy):
+ssl_verify_client on;
+ssl_client_certificate /etc/nginx/pjbank-ca.crt;
+ssl_verify_depth 2;</pre>
+        <p>Em caso de falha: Nginx retorna <code>400 No required SSL certificate was sent</code> antes de chegar ao Laravel — zero custo de processamento para requisições ilegítimas.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Detecção de Anomalias -->
+  <div class="rec-card seg">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟢</span>
+      <span class="rec-title">Detecção de Anomalias por Tenant</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-high">Esforço Alto</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-seg">Segurança</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Sistema que aprende o padrão normal de cada tenant (baseline histórico) e alerta quando o comportamento desvia significativamente — volume, horário, concentração de valores.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Um tenant com 50 boletos/dia que emite 2.000 em 10 minutos pode indicar fraude, bug em produção ou comprometimento de credenciais. Sem detecção automática, o dano só é descoberto depois — horas, dias, ou na próxima fatura do PJBank.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Casos de uso concretos</div>
+        <ul>
+          <li>Tenant emite <strong>5× mais boletos</strong> que a média histórica em 1 hora → alerta por e-mail</li>
+          <li>Tenant com média de 50 boletos/dia emite <strong>2.000 em 10 minutos</strong> → bloqueio automático + alerta</li>
+          <li><strong>Concentração anormal</strong> — múltiplos boletos com mesmo valor e vencimento → possível fraude em lote</li>
+          <li><strong>Horário incomum</strong> — alto volume em madrugada para tenant que nunca emite fora do horário comercial</li>
+        </ul>
+        <pre>app/Jobs/ComputeTenantBaselineJob.php   ← noturno; calcula média e desvio padrão
+app/Jobs/AnomalyDetectionJob.php        ← a cada 15 minutos
+app/Models/TenantBaseline.php           ← histórico: média, desvio, p95 por tenant</pre>
+      </div>
+      <div class="bonus-box">
+        <div class="bonus-label">Evolução futura</div>
+        Integração com Slack ou PagerDuty para o canal de on-call. Em v2, tela no backoffice para configurar os thresholds por tenant (ex: SEFAZ com limites mais altos que tenants menores).
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sec-body segurança -->
+
+<!-- ═══════════════════════════════════════════════════════
+     LGPD
+═══════════════════════════════════════════════════════ -->
+<h2 class="sec lgpd-head" onclick="toggle(this)">LGPD — Lei Geral de Proteção de Dados</h2>
+<div class="sec-body">
+
+  <!-- 9. Portal do Titular -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🔴</span>
+      <span class="rec-title">Portal do Titular (Art. 18)</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-vhigh">Impacto Muito Alto</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Interface onde o contribuinte (titular dos dados) pode exercer seus direitos previstos no Art. 18 da LGPD: saber quais dados existem sobre ele, receber uma cópia, solicitar correção ou pedir exclusão.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa — obrigação legal</div>
+        Sem isso, qualquer reclamação na ANPD de um contribuinte que teve boleto emitido pode resultar em auto de infração. O AR Digital já coleta CPF hash + e-mail — esses dados precisam estar cobertos pelo direito de acesso. Com 341k contribuintes/mês, a probabilidade de uma reclamação formal é real.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Direitos cobertos pelo Art. 18</div>
+        <ul>
+          <li><strong>Confirmação de existência:</strong> "Vocês têm dados meus?"</li>
+          <li><strong>Acesso:</strong> exportar tudo em PDF ou JSON estruturado</li>
+          <li><strong>Correção:</strong> solicitar correção de dado incorreto (e-mail, telefone)</li>
+          <li><strong>Anonimização/Exclusão:</strong> solicitar remoção — com ressalva explícita sobre retenção fiscal</li>
+          <li><strong>Portabilidade:</strong> exportar em formato estruturado para outro controlador</li>
+        </ul>
+        <div class="impl-label" style="margin-top:14px">Rotas do portal</div>
+        <pre>GET  /titular/verificar              ← contribuinte informa CPF → recebe link por e-mail
+GET  /titular/dados/{token}          ← exibe dados (token de 1 uso / 24h de validade)
+POST /titular/exportar/{token}       ← gera PDF com todos os dados do contribuinte
+POST /titular/solicitar-exclusao/{token}  ← abre ticket de exclusão/anonimização</pre>
+        <p>O CPF é comparado como <strong>hash SHA-256</strong> — já implementado no AR Digital. O contribuinte informa o CPF em texto, o sistema hasheia e busca nos registros.</p>
+      </div>
+      <div class="alert-box">
+        <div class="alert-label">⚠ Conflito com retenção fiscal</div>
+        Exclusão de dados de boletos pode conflitar com obrigação de retenção fiscal (5 anos, Art. 195 do CTN). O sistema deve <strong>anonimizar</strong> (substituir dados pessoais por hash) em vez de deletar, e informar isso explicitamente ao contribuinte no momento da solicitação — evita litígios sobre cumprimento ou não do pedido.
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Retenção e Expurgo -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Retenção e Expurgo Automático</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Política definida por tipo de dado com prazo de retenção e job automático que anonimiza ou exclui dados ao atingir o prazo — sem intervenção manual.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        A LGPD exige que dados sejam mantidos <em>apenas pelo tempo necessário</em> para a finalidade declarada (princípio da necessidade, Art. 6º). Guardar dados pessoais indefinidamente é infração. Um job automático elimina o risco de acúmulo não intencional ao longo dos anos.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Política de retenção sugerida</div>
+        <table>
+          <thead><tr><th>Dado</th><th>Retenção</th><th>Ação ao vencer</th></tr></thead>
+          <tbody>
+            <tr><td>Logs de acesso (audit_log)</td><td>2 anos</td><td>Exclusão definitiva</td></tr>
+            <tr><td>Dados do boleto</td><td>5 anos (CTN)</td><td>Anonimização parcial — mantém valor, vencimento, status; remove dados pessoais</td></tr>
+            <tr><td>Eventos AR Digital</td><td>5 anos</td><td>Anonimização — mantém timestamps e carimbos RFC 3161; remove e-mail/telefone</td></tr>
+            <tr><td>Laudos PDF (MinIO)</td><td>5 anos</td><td>Exclusão do arquivo</td></tr>
+            <tr><td>API Keys revogadas</td><td>90 dias</td><td>Exclusão definitiva</td></tr>
+            <tr><td>Tentativas de login falhas</td><td>90 dias</td><td>Exclusão definitiva</td></tr>
+          </tbody>
+        </table>
+        <pre>app/Console/Commands/RunDataRetentionCommand.php
+app/Services/DataRetentionService.php
+config/data_retention.php   ← prazos configuráveis por ambiente</pre>
+        <p>Job semanal com relatório do que foi expurgado → registrado no audit log como evidência de compliance. Prazos configuráveis para ajuste sem deploy.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Consentimento WhatsApp -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Consentimento Rastreável para WhatsApp</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-low">Esforço Baixo</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Registro com validade jurídica de que o contribuinte autorizou o recebimento de notificações via WhatsApp, conforme exige a Meta e a LGPD para envio de mensagens proativas.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa — duplo risco</div>
+        Hoje o WhatsApp é enviado baseado no número de telefone do boleto, sem evidência de que o contribuinte optou por receber via WhatsApp. Isso representa dois riscos simultâneos:
+        <ul style="margin-top:8px">
+          <li><strong>Risco Meta:</strong> violação dos Termos de Serviço — pode resultar em <strong>suspensão do número</strong> sem aviso, interrompendo todos os envios do Payproxy</li>
+          <li><strong>Risco LGPD:</strong> envio de mensagem proativa sem base legal clara (Art. 7º) — o consentimento é a base mais segura para WhatsApp marketing/notificação</li>
+        </ul>
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Fluxo de opt-in</div>
+        <ol>
+          <li>Primeiro e-mail de boleto inclui link: <em>"Receber próximos avisos também via WhatsApp? [Sim, autorizo]"</em></li>
+          <li>Clique registra: timestamp, IP, versão do texto do consentimento exibido</li>
+          <li>WhatsApp só é enviado se houver consentimento registrado</li>
+          <li>Link de opt-out em toda mensagem: <em>"Para não receber mais, clique aqui"</em></li>
+        </ol>
+        <pre>CREATE TABLE whatsapp_consents (
+  id, tenant_id, cpf_hash, phone_hash,
+  consented_at, consent_text_version,
+  revoked_at, revocation_ip
+);</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. Data Masking -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Data Masking nas Interfaces</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-med">Impacto Médio</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Dados pessoais exibidos nas telas do backoffice são automaticamente mascarados baseando-se no perfil do usuário logado — acesso completo apenas para quem tem permissão explícita.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Minimização de exposição — um atendente de suporte vê o suficiente para resolver o problema sem acesso ao dado pessoal completo. Princípio de mínimo privilégio aplicado na camada de apresentação. <code>CryptoService</code> já existe no projeto — é questão de UI e API Resource.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Máscaras por perfil</div>
+        <table>
+          <thead><tr><th>Dado</th><th>Exibição padrão</th><th>Com permissão explícita</th></tr></thead>
+          <tbody>
+            <tr><td>CPF</td><td><code>***.456.789-**</code></td><td><code>123.456.789-00</code></td></tr>
+            <tr><td>E-mail</td><td><code>r***@sefaz.ba.gov.br</code></td><td><code>raimundo@sefaz.ba.gov.br</code></td></tr>
+            <tr><td>Telefone</td><td><code>(71) *****-4321</code></td><td><code>(71) 98765-4321</code></td></tr>
+            <tr><td>Valor do boleto</td><td>Exibido normalmente</td><td>—</td></tr>
+            <tr><td>Nome</td><td>Exibido normalmente</td><td>—</td></tr>
+          </tbody>
+        </table>
+        <p>Diretiva Vue <code>v-mask-sensitive</code> que aplica máscara baseada no perfil do usuário logado. No backend, o API Resource retorna campo mascarado ou completo conforme a role — consistência entre UI e API.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13. Notificação de Incidente -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟡</span>
+      <span class="rec-title">Workflow de Notificação de Incidente (Art. 48)</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-med">Esforço Médio</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Processo estruturado para detecção, avaliação e notificação de incidentes de segurança envolvendo dados pessoais, respeitando os prazos legais da LGPD (72h para notificação à ANPD).</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        A LGPD exige notificação à ANPD em <strong>até 72 horas</strong> após a detecção do incidente, e notificação aos titulares afetados em prazo razoável. Sem processo estruturado, o prazo é perdido na confusão do momento — o resultado é multa garantida além do dano de imagem.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Fluxo automatizado (8 etapas)</div>
+        <ol>
+          <li><strong>Detecção</strong> — manual ou automática via Detecção de Anomalias</li>
+          <li><strong>Abertura do incidente</strong> no sistema (<code>app/Models/SecurityIncident</code>)</li>
+          <li><strong>Avaliação automática de risco</strong> — quantos titulares afetados, quais dados expostos, gravidade</li>
+          <li><strong>Notificação interna imediata</strong> — e-mail para DPO + administrador Payproxy</li>
+          <li><strong>Timer de 72h</strong> visível no backoffice com countdown regressivo até o prazo ANPD</li>
+          <li><strong>Geração do formulário pré-preenchido</strong> para notificação à ANPD com todos os dados disponíveis</li>
+          <li><strong>Registro de todas as ações tomadas</strong> — trilha de evidências auditável</li>
+          <li><strong>Notificação aos titulares afetados</strong> via e-mail com template aprovado juridicamente</li>
+        </ol>
+        <pre>app/Models/SecurityIncident.php
+app/Services/IncidentNotificationService.php</pre>
+      </div>
+      <div class="bonus-box">
+        <div class="bonus-label">O que o sistema gera automaticamente</div>
+        Rascunho do comunicado à ANPD com: dados do incidente, sistemas afetados, número estimado de titulares impactados, medidas tomadas imediatamente. O DPO revisa e envia — mas a base documental já está pronta, evitando erros sob pressão de prazo.
+      </div>
+    </div>
+  </div>
+
+  <!-- 14. Registro de Operações -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟢</span>
+      <span class="rec-title">Registro de Operações de Tratamento (Art. 37)</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-high">Esforço Alto</span>
+        <span class="badge badge-imp-high">Impacto Alto</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Inventário documentado de todas as operações de tratamento de dados pessoais realizadas pela plataforma — exigido pelo Art. 37 da LGPD para controladores e operadores que tratam dados em larga escala.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        Para a SEFAZ (341k contribuintes/mês), a ANPD pode solicitar esse inventário a qualquer momento, especialmente em uma renovação de contrato ou investigação. Mantê-lo <strong>no sistema</strong> — e não em planilha — garante que está sempre atualizado conforme novos módulos são implementados.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">Campos documentados por operação</div>
+        <table>
+          <thead><tr><th>Campo</th><th>Exemplo para Payproxy</th></tr></thead>
+          <tbody>
+            <tr><td>Finalidade</td><td>Emissão de boleto bancário para cobrança fiscal</td></tr>
+            <tr><td>Base legal</td><td>Execução de contrato (Art. 7º, V LGPD)</td></tr>
+            <tr><td>Dados tratados</td><td>CPF, nome, e-mail, telefone, valor do débito</td></tr>
+            <tr><td>Compartilhamento</td><td>PJBank (banco parceiro), Meta via ouvimosvc.com.br, ACT ICP-Brasil</td></tr>
+            <tr><td>Retenção</td><td>5 anos (obrigação fiscal, CTN Art. 195)</td></tr>
+            <tr><td>Medidas de segurança</td><td>Criptografia TLS 1.3 em trânsito, hash SHA-256 para CPF, MinIO criptografado</td></tr>
+            <tr><td>Responsável (DPO)</td><td>Nome e contato do encarregado de dados</td></tr>
+          </tbody>
+        </table>
+        <pre>app/Models/DataProcessingRecord.php
+Backoffice: tela de manutenção + geração de relatório PDF (RIPD simplificado)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 15. RIPD -->
+  <div class="rec-card lgpd">
+    <div class="rec-header" onclick="toggleCard(this)">
+      <span class="rec-priority">🟢</span>
+      <span class="rec-title">RIPD Automatizado</span>
+      <span class="rec-badges">
+        <span class="badge badge-esf-high">Esforço Alto</span>
+        <span class="badge badge-imp-med">Impacto Médio</span>
+        <span class="badge badge-type-lgpd">LGPD</span>
+      </span>
+      <span class="rec-arrow">▼</span>
+    </div>
+    <div class="rec-body" style="display:none">
+      <p class="rec-desc">Relatório de Impacto à Proteção de Dados Pessoais (RIPD) — documento exigido pela ANPD para operações de tratamento de alto risco. Com 341k contribuintes/mês tratando CPF e dados fiscais, Payproxy se enquadra nessa categoria.</p>
+      <div class="why-box">
+        <div class="why-label">Por que importa</div>
+        O RIPD é o documento mais completo de demonstração de maturidade em privacidade. É diferencial competitivo concreto na renovação do contrato com a SEFAZ e em auditorias da ANPD — poucos SaaS brasileiros têm isso documentado e atualizado formalmente.
+      </div>
+      <div class="impl-box">
+        <div class="impl-label">O que o RIPD documenta</div>
+        <ul>
+          <li><strong>Descrição dos processos de tratamento</strong> — como e onde os dados fluem no sistema</li>
+          <li><strong>Necessidade e proporcionalidade</strong> — justificativa para cada dado coletado</li>
+          <li><strong>Riscos identificados</strong> para os titulares — vazamento, uso indevido, discriminação</li>
+          <li><strong>Medidas de mitigação adotadas</strong> — controles técnicos e organizacionais implementados</li>
+          <li><strong>Avaliação residual de risco</strong> — parte preenchida manualmente pelo DPO</li>
+        </ul>
+        <div class="impl-label" style="margin-top:14px">Como o sistema gera automaticamente</div>
+        <p>Cruza os dados do <strong>Registro de Operações de Tratamento</strong> com as medidas de segurança implementadas (catalogadas no sistema) e gera um PDF nos moldes do formulário da ANPD. O DPO preenche apenas a avaliação de risco subjetiva — o sistema monta todo o restante do documento final, pronto para entrega.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sec-body lgpd -->
+
+<!-- ═══════════════════════════════════════════════════════
+     MATRIZ
+═══════════════════════════════════════════════════════ -->
+<h2 class="sec" onclick="toggle(this)">Matriz de Priorização</h2>
+<div class="sec-body">
+  <div class="prior-grid">
+    <div class="prior-col imediato">
+      <div class="prior-col-title"><span>🔴</span> Imediato</div>
+      <div class="prior-item">Security Headers <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Audit Log Centralizado <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Portal do Titular <span class="prior-item-type type-lgpd">LGPD</span></div>
+    </div>
+    <div class="prior-col curto">
+      <div class="prior-col-title"><span>🟡</span> Curto Prazo</div>
+      <div class="prior-item">Rate Limiting Granular <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">IP Allowlist <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Rotação de API Keys <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Retenção e Expurgo <span class="prior-item-type type-lgpd">LGPD</span></div>
+      <div class="prior-item">Consentimento WhatsApp <span class="prior-item-type type-lgpd">LGPD</span></div>
+      <div class="prior-item">Data Masking <span class="prior-item-type type-lgpd">LGPD</span></div>
+      <div class="prior-item">Notif. de Incidente <span class="prior-item-type type-lgpd">LGPD</span></div>
+    </div>
+    <div class="prior-col medio">
+      <div class="prior-col-title"><span>🟢</span> Médio Prazo</div>
+      <div class="prior-item">Secrets Management <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">mTLS Webhooks <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Detecção Anomalias <span class="prior-item-type type-seg">SEG</span></div>
+      <div class="prior-item">Registro Operações <span class="prior-item-type type-lgpd">LGPD</span></div>
+      <div class="prior-item">RIPD Automatizado <span class="prior-item-type type-lgpd">LGPD</span></div>
+    </div>
+  </div>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>Item</th><th>Tipo</th><th>Esforço</th><th>Impacto</th><th>Prioridade</th></tr></thead>
+    <tbody>
+      <tr><td>Security Headers</td><td>Segurança</td><td>Baixo (1 dia)</td><td>Alto</td><td>🔴 Imediato</td></tr>
+      <tr><td>Audit Log</td><td>Segurança</td><td>Médio (1 sem)</td><td>Muito Alto</td><td>🔴 Imediato</td></tr>
+      <tr><td>Portal do Titular</td><td>LGPD</td><td>Médio (1 sem)</td><td>Muito Alto</td><td>🔴 Imediato</td></tr>
+      <tr><td>Rate Limiting</td><td>Segurança</td><td>Baixo (2 dias)</td><td>Alto</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>IP Allowlist</td><td>Segurança</td><td>Baixo (2 dias)</td><td>Alto</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Rotação API Keys</td><td>Segurança</td><td>Médio (3 dias)</td><td>Médio</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Retenção e Expurgo</td><td>LGPD</td><td>Médio (1 sem)</td><td>Alto</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Consentimento WhatsApp</td><td>LGPD</td><td>Baixo (2 dias)</td><td>Alto</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Data Masking</td><td>LGPD</td><td>Médio (1 sem)</td><td>Médio</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Notif. de Incidente</td><td>LGPD</td><td>Médio (1 sem)</td><td>Alto</td><td>🟡 Curto prazo</td></tr>
+      <tr><td>Secrets Management</td><td>Segurança</td><td>Alto (2 sem)</td><td>Alto</td><td>🟢 Médio prazo</td></tr>
+      <tr><td>mTLS Webhooks</td><td>Segurança</td><td>Médio (3 dias)</td><td>Médio</td><td>🟢 Médio prazo</td></tr>
+      <tr><td>Detecção Anomalias</td><td>Segurança</td><td>Alto (3 sem)</td><td>Alto</td><td>🟢 Médio prazo</td></tr>
+      <tr><td>Registro Operações</td><td>LGPD</td><td>Alto (2 sem)</td><td>Alto</td><td>🟢 Médio prazo</td></tr>
+      <tr><td>RIPD Automatizado</td><td>LGPD</td><td>Alto (2 sem)</td><td>Médio</td><td>🟢 Médio prazo</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function toggle(h){
+  var b=h.nextElementSibling,closing=!h.classList.contains('closed');
+  h.classList.toggle('closed',closing);
+  b.classList.toggle('closed',closing);
+  if(!closing)b.style.maxHeight=b.scrollHeight+'px';
+}
+function toggleAll(close){
+  document.querySelectorAll('h2.sec').forEach(function(h){
+    var b=h.nextElementSibling;
+    h.classList.toggle('closed',close);
+    b.classList.toggle('closed',close);
+    if(!close)b.style.maxHeight=b.scrollHeight+'px';
+  });
+}
+function toggleCard(header){
+  var body=header.nextElementSibling;
+  var isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  header.querySelector('.rec-arrow').textContent=isOpen?'▼':'▲';
+  var sb=header.closest('.sec-body');
+  if(sb)sb.style.maxHeight=sb.scrollHeight+'px';
+}
+function toggleCards(close){
+  document.querySelectorAll('.rec-body').forEach(function(b){
+    b.style.display=close?'none':'block';
+  });
+  document.querySelectorAll('.rec-arrow').forEach(function(a){
+    a.textContent=close?'▼':'▲';
+  });
+  document.querySelectorAll('.sec-body').forEach(function(sb){
+    if(!sb.classList.contains('closed'))sb.style.maxHeight=sb.scrollHeight+'px';
+  });
+}
+
+// Quadrant Canvas
+(function(){
+  var canvas=document.getElementById('qCanvas');
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width,H=canvas.height;
+  var PAD={l:80,r:30,t:30,b:60};
+  var PW=W-PAD.l-PAD.r,PH=H-PAD.t-PAD.b;
+
+  var ITEMS=[
+    {id:1,label:'Security Headers',effort:1.0,impact:3.2,type:'seg',pri:'r'},
+    {id:2,label:'Audit Log',effort:2.0,impact:3.8,type:'seg',pri:'r'},
+    {id:3,label:'Rate Limiting',effort:1.4,impact:3.0,type:'seg',pri:'y'},
+    {id:4,label:'IP Allowlist',effort:1.7,impact:3.1,type:'seg',pri:'y'},
+    {id:5,label:'Rotação API Keys',effort:2.2,impact:2.6,type:'seg',pri:'y'},
+    {id:6,label:'Secrets Management',effort:3.6,impact:3.5,type:'seg',pri:'g'},
+    {id:7,label:'mTLS Webhooks',effort:2.4,impact:2.4,type:'seg',pri:'g'},
+    {id:8,label:'Detecção Anomalias',effort:3.8,impact:3.3,type:'seg',pri:'g'},
+    {id:9,label:'Portal do Titular',effort:2.0,impact:4.0,type:'lgpd',pri:'r'},
+    {id:10,label:'Retenção & Expurgo',effort:2.6,impact:3.2,type:'lgpd',pri:'y'},
+    {id:11,label:'Consentimento WA',effort:1.6,impact:3.0,type:'lgpd',pri:'y'},
+    {id:12,label:'Data Masking',effort:2.6,impact:2.5,type:'lgpd',pri:'y'},
+    {id:13,label:'Notif. Incidente',effort:2.7,impact:3.5,type:'lgpd',pri:'y'},
+    {id:14,label:'Registro Operações',effort:3.6,impact:3.4,type:'lgpd',pri:'g'},
+    {id:15,label:'RIPD Automatizado',effort:4.0,impact:2.8,type:'lgpd',pri:'g'},
+  ];
+  var priColors={r:'#dc2626',y:'#d97706',g:'#16a34a'};
+  var typeColors={seg:'#1a6fb5',lgpd:'#166534'};
+
+  function toX(e){return PAD.l+((e-0.5)/4)*PW;}
+  function toY(i){return PAD.t+PH-((i-0.5)/4)*PH;}
+
+  function draw(hover){
+    ctx.clearRect(0,0,W,H);
+    var midX=toX(2.25),midY=toY(2.25);
+    ctx.fillStyle='rgba(220,252,231,0.35)';ctx.fillRect(PAD.l,PAD.t,midX-PAD.l,midY-PAD.t);
+    ctx.fillStyle='rgba(219,234,254,0.25)';ctx.fillRect(midX,PAD.t,W-PAD.r-midX,midY-PAD.t);
+    ctx.fillStyle='rgba(243,244,246,0.35)';ctx.fillRect(PAD.l,midY,midX-PAD.l,H-PAD.b-midY);
+    ctx.fillStyle='rgba(254,249,195,0.3)';ctx.fillRect(midX,midY,W-PAD.r-midX,H-PAD.b-midY);
+    ctx.font='italic 8.5pt Segoe UI,Arial,sans-serif';
+    ctx.fillStyle='rgba(0,0,0,0.22)';ctx.textAlign='center';
+    ctx.fillText('Quick Wins',PAD.l+(midX-PAD.l)/2,PAD.t+14);
+    ctx.fillText('Projetos estratégicos',midX+(W-PAD.r-midX)/2,PAD.t+14);
+    ctx.fillText('Incrementais',PAD.l+(midX-PAD.l)/2,H-PAD.b-6);
+    ctx.fillText('Reconsiderar',midX+(W-PAD.r-midX)/2,H-PAD.b-6);
+    ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=1;
+    for(var e=1;e<=4;e++){var gx=toX(e);ctx.beginPath();ctx.moveTo(gx,PAD.t);ctx.lineTo(gx,H-PAD.b);ctx.stroke();}
+    for(var i=1;i<=4;i++){var gy=toY(i);ctx.beginPath();ctx.moveTo(PAD.l,gy);ctx.lineTo(W-PAD.r,gy);ctx.stroke();}
+    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.setLineDash([4,3]);ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(midX,PAD.t);ctx.lineTo(midX,H-PAD.b);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.l,midY);ctx.lineTo(W-PAD.r,midY);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle='#1a2a4a';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,H-PAD.b);ctx.lineTo(W-PAD.r,H-PAD.b);ctx.stroke();
+    ctx.fillStyle='#1a2a4a';ctx.font='9pt Segoe UI,Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Esforço de Implementação →',PAD.l+PW/2,H-8);
+    ctx.save();ctx.translate(14,PAD.t+PH/2);ctx.rotate(-Math.PI/2);ctx.fillText('↑ Impacto Esperado',0,0);ctx.restore();
+    for(var t=1;t<=4;t++){
+      ctx.fillStyle='#888';ctx.font='8pt Segoe UI,Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(['Baixo','Médio','Alto','Muito Alto'][t-1],toX(t),H-PAD.b+14);
+      ctx.textAlign='right';
+      ctx.fillText(t,PAD.l-6,toY(t)+4);
+    }
+    ITEMS.forEach(function(item,idx){
+      var x=toX(item.effort),y=toY(item.impact),r=10;
+      ctx.shadowColor='rgba(0,0,0,0.18)';ctx.shadowBlur=hover===idx?8:4;
+      ctx.beginPath();ctx.arc(x,y,r+3,0,Math.PI*2);
+      ctx.fillStyle=priColors[item.pri];ctx.fill();
+      ctx.shadowBlur=0;ctx.shadowColor='transparent';
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=typeColors[item.type];ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold '+(hover===idx?'8':'7')+'pt Segoe UI,Arial,sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.id,x,y);
+      ctx.textBaseline='alphabetic';
+    });
+    if(hover!==null){
+      var item=ITEMS[hover];
+      var x=toX(item.effort),y=toY(item.impact);
+      var tw=Math.max(ctx.measureText(item.label).width+90,160);
+      var tx=Math.min(x+16,W-PAD.r-tw-4);
+      var ty=Math.max(y-18,PAD.t+4);
+      ctx.fillStyle='rgba(26,42,74,0.92)';
+      roundRect(ctx,tx,ty,tw,36,5);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 9pt Segoe UI,Arial,sans-serif';
+      ctx.textAlign='left';ctx.fillText(item.label,tx+10,ty+14);
+      ctx.font='8pt Segoe UI,Arial,sans-serif';ctx.fillStyle='rgba(255,255,255,0.75)';
+      var typeLabel=item.type==='seg'?'Segurança':'LGPD';
+      var priLabel=item.pri==='r'?'Imediato':item.pri==='y'?'Curto prazo':'Médio prazo';
+      ctx.fillText(typeLabel+' · '+priLabel,tx+10,ty+28);
+    }
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+    ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);
+    ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+    ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);
+    ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+  }
+  var hovering=null;
+  canvas.addEventListener('mousemove',function(e){
+    var rect=canvas.getBoundingClientRect();
+    var mx=(e.clientX-rect.left)*(W/rect.width);
+    var my=(e.clientY-rect.top)*(H/rect.height);
+    var found=null;
+    ITEMS.forEach(function(item,idx){
+      var dx=mx-toX(item.effort),dy=my-toY(item.impact);
+      if(Math.sqrt(dx*dx+dy*dy)<16)found=idx;
+    });
+    if(found!==hovering){hovering=found;draw(hovering);}
+    canvas.style.cursor=found!==null?'pointer':'crosshair';
+  });
+  canvas.addEventListener('mouseleave',function(){hovering=null;draw(null);});
+  draw(null);
+  document.querySelectorAll('.sec-body').forEach(function(b){b.style.maxHeight=b.scrollHeight+'px';});
+})();
+</script>

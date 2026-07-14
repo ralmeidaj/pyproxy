@@ -16,7 +16,7 @@ Contratada pela **SEFAZ Salvador** (Secretaria Municipal da Fazenda de Salvador/
 | Storage (PDFs, laudos) | MinIO (S3-compatible) |
 | Frontend | Inertia.js + Vue 3 + Tailwind CSS 4 |
 | Real-time | Laravel Reverb (WebSocket) |
-| WhatsApp | Meta Cloud API via ouvimosvc.com.br (BSP Meta) |
+| WhatsApp | OVC360 API via ouvimosvc.com.br (BSP Meta credenciado) |
 | Build | Vite 6 |
 
 ---
@@ -113,10 +113,11 @@ docker exec payproxy-app php artisan test
 
 | Variável | Descrição |
 |---|---|
-| `META_WA_ENABLED` | Ativa envio WhatsApp via Meta Cloud API |
-| `META_WA_PHONE_ID` | ID do número de telefone no Meta |
-| `META_WA_ACCESS_TOKEN` | Token de acesso permanente do Meta |
-| `META_WA_WEBHOOK_VERIFY_TOKEN` | Token de verificação do webhook Meta |
+| `OVC360_ENABLED` | Ativa envio de WhatsApp via OVC360 / Ouvimos BSP |
+| `OVC360_INTEGRATION_KEY` | Chave de integração fornecida pela Ouvimos (`X-Integration-Key`) |
+| `OVC360_ENDPOINT` | URL do webhook OVC360 (padrão: endpoint Ciberian em ouvimosvc.com.br) |
+| `META_WA_ENABLED` | Ativa recebimento de webhooks de entrega WhatsApp (AR Digital) |
+| `META_WA_WEBHOOK_VERIFY_TOKEN` | Token de verificação do webhook Meta (necessário mesmo sem envio direto) |
 | `AWS_*` | Credenciais MinIO para storage de PDFs e laudos AR |
 | `PJBANK_CEDENTE` | Credencial PJBank para emissão de boletos |
 | `ACT_ENABLED` | Ativa carimbos RFC 3161 reais (ICP-Brasil ou FreeTSA) |

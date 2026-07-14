@@ -59,4 +59,10 @@ return [
         'api_version'   => env('META_WA_API_VERSION', 'v19.0'),
     ],
 
+    'ovc360' => [
+        'enabled'         => env('OVC360_ENABLED', false),
+        'integration_key' => env('OVC360_INTEGRATION_KEY'),
+        'endpoint'        => env('OVC360_ENDPOINT', 'https://ovc360api.ouvimosvc.com.br/api/v1/integrations/hooks/ciberian-boleto'),
+    ],
+
 ];
