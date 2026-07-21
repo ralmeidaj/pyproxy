@@ -62,10 +62,30 @@ O arquivo HTML é sempre gerado via script Node.js descartável (`gen-html.js`):
 | `RF-xx` | Funcional — geral | RF-01 a RF-50 |
 | `RF-PART-xx` | Funcional — Parceiros Bancários | RF-PART-01 a RF-PART-08 |
 | `RF-MSG-xx` | Funcional — Comunicação | RF-MSG-01 a RF-MSG-06 |
-| `RNF-xx` | Não Funcional | RNF-01 a RNF-26 |
+| `RF-IMP-xx` | Funcional — Importação de Arquivos | RF-IMP-01 a RF-IMP-15 |
+| `RF-COB-xx` | Funcional — Régua de Cobrança | RF-COB-01 a RF-COB-10 |
+| `RF-CONT-xx` | Funcional — Portal do Contribuinte | RF-CONT-01 a RF-CONT-12 |
+| `RF-GEO-xx` | Funcional — Geointeligência | RF-GEO-01 a RF-GEO-06 |
+| `RF-PARC-xx` | Funcional — Parcelamento e Carnê | RF-PARC-01 a RF-PARC-08 |
+| `RF-APP-xx` | Funcional — App Nativo do Contribuinte | RF-APP-01 a RF-APP-09 |
+| `RF-TRIB-xx` | Funcional — Modelo de Dados Tributários | RF-TRIB-01 a RF-TRIB-04 |
+| `RF-INC-xx` | Funcional — Reporte de Inconsistência Cadastral | RF-INC-01 a RF-INC-05 |
+| `RF-CRM-xx` | Funcional — CzRM / Jornada do Cidadão | RF-CRM-01 a RF-CRM-04 |
+| `RF-LGPD-xx` | Funcional — Segurança & Conformidade LGPD | RF-LGPD-01 a RF-LGPD-15 |
+| `RNF-xx` | Não Funcional | RNF-01 a RNF-31 |
 | `RN-xx` | Regra de Negócio | RN-01 a RN-09 |
 
 Ao adicionar novos requisitos, verificar sempre se o número já existe antes de atribuir.
+
+### Decisões de escopo — fora do v1
+
+| Item | Decisão |
+|---|---|
+| Cartão de crédito/débito | Fora do escopo. Meios suportados: boleto, PIX e DDA. |
+| Integração SFTP/CNAB de entrada | Fora do escopo. Importação via API REST (RF-IMP). |
+| KYC / Abertura de conta pelo app | Fora do escopo. Credenciais PJBank configuradas manualmente no backoffice. |
+| Retorno de baixa ao GRP | Fora do escopo. Payproxy não envia dados de volta ao sistema tributário municipal. |
+| Arquivo de retorno FEBRABAN | Coberto por webhook (RF-25) + conciliação ativa noturna (RF-29). Sem arquivo adicional. |
 
 ---
 

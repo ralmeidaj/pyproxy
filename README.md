@@ -27,8 +27,53 @@ Contratada pela **SEFAZ Salvador** (Secretaria Municipal da Fazenda de Salvador/
 - API REST pública autenticada por API Key com escopos granulares
 - Suporte a split de pagamento com múltiplos favorecidos
 - Adapter pattern para parceiros bancários (v1: PJBank)
-- Registro DDA via FEBRABAN/BACEN
+- Registro DDA via FEBRABAN/BACEN (notificação automática de carnê digital no e-mail)
 - Portal do tenant (Inertia.js) para gestão de boletos e usuários
+- Parcelamento e carnê de tributo (RF-PARC): N boletos independentes vinculados por `installment_plan_id`
+
+### Importação de Arquivos
+- `POST /api/v1/imports` — importação assíncrona de lançamentos em CSV, TXT, XML e XLS
+- Validação linha a linha (CPF, CNPJ, valor, vencimento, referência)
+- Arquitetura de 2 níveis: `ProcessImportFileJob` → `IssueBoletoFromImportJob` por linha
+- Download do arquivo de rejeitados com motivo por linha
+- Idempotência por hash SHA-256 do arquivo
+
+### Portal Público do Contribuinte
+- Acesso por CPF + link temporário por e-mail (token 24h, 1 uso)
+- Visualização de débitos agrupados por município (multi-tenant)
+- Emissão de 2ª via com novo boleto PJBank e `parent_boleto_id`
+- Entidade `contribuintes` global (cross-tenant), identificada por hash SHA-256 do CPF
+
+### App Nativo do Contribuinte
+- React Native — iOS 13+ e Android 8+
+- PoC: TestFlight (iOS) + APK side-loading (Android) — sem publicação nas lojas
+- Autenticação por CPF + e-mail link; token no keychain/keystore
+- Push notifications (D-5, D-1, D+1, pagamento confirmado)
+- Biometria opcional (Face ID / Touch ID / impressão digital)
+
+### CzRM — Jornada do Cidadão
+- Timeline unificada de eventos do contribuinte (boletos, notificações, AR Digital, acessos, pagamentos)
+- Portal do contribuinte: aba "Histórico" na sessão autenticada
+- Backoffice: seção "Contribuintes" com busca por CPF e timeline completa
+
+### Régua de Cobrança Ativa
+- Configuração por tenant: dias (D-5, D-1, D+1, D+7, D+30), canal e tipo de mensagem
+- Job diário de disparo; idempotência por boleto + regra + dia
+- Métricas de eficácia disponíveis no backoffice
+
+### Geointeligência
+- Mapa de calor de inadimplência por bairro (Leaflet, sem API key externa)
+- GeoJSON por tenant; dados extraídos de `payer_address.bairro`
+- `GET /api/v1/reports/geo` retorna GeoJSON com indicadores por bairro
+
+### Segurança & Conformidade LGPD
+- Portal do Titular (Art. 18): acesso, exportação PDF e solicitação de anonimização
+- Mascaramento de dados pessoais (CPF, e-mail, telefone) com reveal + audit log
+- Consentimento rastreável para WhatsApp (`whatsapp_consents`)
+- Rotina semanal de retenção e expurgo (`php artisan data:retention`)
+- Notificação de incidente (Art. 48): countdown 72h ANPD no backoffice
+- Painel ROT/RIPD via LGPD Gateway externo (projeto separado Ciberian)
+- Security headers, rate limiting no login, IP Allowlist por tenant, expiração de API Keys
 
 ### AR Digital
 Módulo nativo de Aviso de Recebimento Digital com validade jurídica:
@@ -43,10 +88,12 @@ Módulo nativo de Aviso de Recebimento Digital com validade jurídica:
 Interface administrativa para a equipe Ciberian:
 - Gestão de tenants com controle de status e histórico
 - Configuração de boleto (split, parceiro bancário)
-- Gestão de API Keys
+- Gestão de API Keys (com expiração configurável)
 - Configuração de AR Digital por tenant
-- Visualização de boletos e timeline de notificações AR
-- Relatórios e logs de auditoria
+- Seção Contribuintes: busca por CPF e timeline CzRM
+- Painel ROT/RIPD por tenant (integração LGPD Gateway)
+- Fila de tickets de inconsistência cadastral (RF-INC) e exclusão de dados (Art. 18)
+- Relatórios, geointeligência e logs de auditoria
 
 ---
 
@@ -105,6 +152,10 @@ docker exec payproxy-app php artisan l5-swagger:generate
 
 # Rodar testes
 docker exec payproxy-app php artisan test
+
+# Rotina de retenção de dados (LGPD + CTN)
+docker exec payproxy-app php artisan data:retention --dry-run   # simulação
+docker exec payproxy-app php artisan data:retention              # execução real
 ```
 
 ---
@@ -123,6 +174,8 @@ docker exec payproxy-app php artisan test
 | `ACT_ENABLED` | Ativa carimbos RFC 3161 reais (ICP-Brasil ou FreeTSA) |
 | `ACT_SERPRO_URL` / `ACT_SERPRO_USER` / `ACT_SERPRO_PASSWORD` | Credenciais Serpro (produção) |
 | `ACT_BRY_URL` / `ACT_SOLUTI_URL` / `ACT_CERTISIGN_URL` | URLs dos demais provedores ACT |
+| `LGPD_GATEWAY_URL` | URL do LGPD Gateway externo (projeto separado Ciberian) para leitura de ROT/RIPD |
+| `LGPD_GATEWAY_KEY` | API Key para autenticação no LGPD Gateway |
 
 ---
 
@@ -154,8 +207,9 @@ app/
 
 ---
 
-## Rotas públicas AR Digital
+## Rotas públicas
 
+### AR Digital
 | Método | Rota | Descrição |
 |---|---|---|
 | `GET` | `/ar/pixel/{token}` | Pixel de rastreamento 1×1 |
@@ -164,6 +218,23 @@ app/
 | `POST` | `/api/webhooks/smtp-dsn` | Webhook de DSN SMTP (entrega/bounce) |
 | `GET` | `/api/webhooks/meta-whatsapp` | Verificação do webhook Meta |
 | `POST` | `/api/webhooks/meta-whatsapp` | Eventos de entrega WhatsApp |
+
+### Portal do Contribuinte
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/contribuinte` | Tela de entrada (CPF) |
+| `POST` | `/contribuinte/verificar` | Envia link por e-mail (token 24h) |
+| `GET` | `/contribuinte/debitos/{token}` | Lista débitos agrupados por município |
+| `POST` | `/contribuinte/boleto/{id}/2via` | Emite 2ª via e redireciona |
+
+### Portal do Titular LGPD
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/titular/verificar` | Tela de verificação por CPF |
+| `POST` | `/titular/verificar` | Envia link por e-mail (token 24h) |
+| `GET` | `/titular/dados/{token}` | Exibe dados do titular |
+| `POST` | `/titular/exportar/{token}` | Gera PDF com todos os dados |
+| `POST` | `/titular/solicitar-exclusao/{token}` | Abre ticket de anonimização |
 
 ---
 

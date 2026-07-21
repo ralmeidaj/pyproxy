@@ -276,6 +276,7 @@ DDA.
 **RF-MSG-02** Ao emitir um boleto, o sistema deve enviar automaticamente ao pagador:
 - **E-mail** com PDF do boleto, linha digitável, QR Code Pix e instruções de pagamento (ambos os modelos)
 - **Mensagem WhatsApp** com link do boleto e QR Code Pix (somente Modelo 2)
+- **Nota sobre Carnê Digital DDA:** o e-mail deve incluir bloco informativo orientando o contribuinte a ativar o DDA no app do seu banco para receber futuros boletos automaticamente, sem necessidade de buscar o PDF. O texto do bloco é configurável por tenant. O Payproxy não controla nem consulta o status de adesão ao DDA do contribuinte — a ativação é feita inteiramente no app do banco.
 
 **RF-MSG-03** O endereço de e-mail e o número de telefone utilizados no envio são provenientes dos dados do pagador informados no momento da emissão (RF-15). Campos ausentes não impedem a emissão — apenas o canal correspondente é suprimido, com registro em log.
 
@@ -424,6 +425,377 @@ tenant, tipo de operação, ator e período.
 
 ---
 
+### 1.14 Importação de Arquivos
+
+**RF-IMP-01** O sistema deve aceitar importação de arquivos de lançamentos para emissão em massa de boletos via `POST /api/v1/imports` (multipart/form-data), com autenticação por API Key com escopo `boleto:write`.
+
+**RF-IMP-02** Formatos de arquivo suportados:
+- CSV (delimitado por vírgula, ponto e vírgula ou tabulação — detectado automaticamente)
+- TXT posicional (layout fixo, definido por mapping configurável por tenant)
+- XML (estrutura padrão Payproxy)
+- XLS/XLSX (planilha Excel)
+
+**RF-IMP-03** Encodings aceitos: UTF-8 e ISO-8859-1 (Latin-1), detectados automaticamente — necessário para sistemas legados municipais.
+
+**RF-IMP-04** Campos por linha/registro:
+- **Obrigatórios:** CPF/CNPJ do pagador, nome, valor (R$), data de vencimento, referência externa do tenant
+- **Opcionais:** e-mail, telefone, endereço completo, metadados JSON (tipo de tributo, exercício fiscal, inscrição imobiliária)
+
+**RF-IMP-05** Validações aplicadas linha a linha:
+- CPF/CNPJ: formato e dígitos verificadores (algoritmo Receita Federal)
+- Valor: positivo, dentro do limite máximo configurado por tenant
+- Vencimento: data válida no formato DD/MM/AAAA ou MM/DD/YYYY
+- Referência externa: única por tenant (conforme RN-01)
+- E-mail e CEP: formato válido, quando presentes
+
+**RF-IMP-06** O processamento é assíncrono. Ao receber o arquivo, o sistema retorna imediatamente o `import_id` com status `RECEBIDO`. O processamento ocorre em fila background.
+
+**RF-IMP-07** Ciclo de status do lote: `RECEBIDO → EM_PROCESSAMENTO → CONCLUIDO` (caminho normal) | `EM_PROCESSAMENTO → ERRO_CRITICO` (arquivo ilegível ou sem nenhuma linha válida).
+
+**RF-IMP-08** `GET /api/v1/imports/{id}` retorna: status atual, total de linhas do arquivo, aceitas, rejeitadas, boletos emitidos com sucesso, boletos com falha de emissão, percentuais correspondentes e timestamps de início e conclusão.
+
+**RF-IMP-09** `GET /api/v1/imports/{id}/rejects` disponibiliza arquivo de retorno para download com as linhas rejeitadas, código de erro e descrição do motivo, no mesmo formato do arquivo enviado (quando possível).
+
+**RF-IMP-10** Cada linha aceita na validação gera um job individual de emissão de boleto (`IssueBoletoFromImportJob`), processado de forma assíncrona e independente via fila. Falha na emissão — incluindo falha temporária na API do parceiro bancário — usa o mecanismo de retry nativo do Laravel (até 3 tentativas com backoff exponencial), sem afetar o processamento das demais linhas. Após esgotar as tentativas, a linha é marcada como `FALHA_EMISSAO` com o motivo registrado. A emissão de cada boleto aceito chama individualmente a API do parceiro bancário (`POST /recebimentos/{credencial}/transacoes` no caso do PJBank) — não há endpoint de lote no parceiro; o volume é gerenciado inteiramente pelo Payproxy via filas.
+
+**RF-IMP-11** Idempotência por arquivo: arquivo com hash SHA-256 idêntico a um já processado com sucesso é recusado com mensagem informativa, sem reprocessamento.
+
+**RF-IMP-12** Ao concluir o processamento, o sistema envia notificação webhook ao tenant (quando configurado) com o resumo do lote: total aceitos, total rejeitados, total emitidos, total com falha de emissão.
+
+**RF-IMP-13** Limites por arquivo: máximo de 10 MB e 10.000 linhas por importação.
+
+**RF-IMP-14** `GET /api/v1/imports` lista o histórico de importações do tenant com filtros por status e período.
+
+**RF-IMP-15** O processamento de linhas deve respeitar o rate limit do parceiro bancário. O número máximo de jobs de emissão simultâneos por tenant é configurável via `config/imports.php` (padrão: 10 jobs concorrentes), impedindo rajadas que possam resultar em bloqueio pela API do parceiro.
+
+---
+
+### 1.15 Régua de Cobrança Ativa
+
+**RF-COB-01** O sistema deve permitir configuração de régua de cobrança ativa por tenant, definindo a sequência de notificações automáticas enviadas a pagadores de boletos pendentes em intervalos configuráveis antes e após o vencimento.
+
+**RF-COB-02** Cada regra da régua deve especificar: número de dias em relação ao vencimento (negativo = antes, positivo = depois), canal de envio (e-mail, WhatsApp ou ambos), tipo de mensagem (lembrete pré-vencimento / alerta de vencimento / cobrança pós-vencimento) e estado ativo/inativo individualmente.
+
+**RF-COB-03** Configuração padrão sugerida pela plataforma, personalizável por tenant:
+
+| Dia | Canal | Tipo |
+|---|---|---|
+| D-5 | E-mail | Lembrete antecipado |
+| D-1 | E-mail + WhatsApp | Lembrete urgente |
+| D+1 | E-mail | Aviso de vencimento |
+| D+7 | E-mail + WhatsApp | Cobrança |
+| D+30 | E-mail | Cobrança final |
+
+**RF-COB-04** A régua é executada por job diário que identifica boletos com status `PENDENTE` enquadrados na janela de cada regra ativa e dispara as notificações configuradas.
+
+**RF-COB-05** Cada notificação enviada pela régua é registrada em `boleto_notifications` com vínculo ao boleto e à regra aplicada, impedindo reenvio duplicado da mesma regra para o mesmo boleto no mesmo dia.
+
+**RF-COB-06** Boletos com status diferente de `PENDENTE` são excluídos automaticamente do processamento da régua.
+
+**RF-COB-07** O tenant pode ativar e desativar a régua globalmente e por regra individual no portal do tenant, sem necessidade de suporte técnico.
+
+**RF-COB-08** O tenant pode excluir boletos específicos da régua via campo `opt_out_cobranca`, definível no momento da emissão via API ou posteriormente no portal.
+
+**RF-COB-09** As notificações enviadas pela régua respeitam o modelo de comunicação configurado no tenant (RF-MSG-01): Modelo 1 envia apenas e-mail; Modelo 2 envia e-mail e WhatsApp.
+
+**RF-COB-10** O sistema registra métricas de eficácia da régua: percentual de boletos pagos após cada intervalo de notificação, disponível para análise por tenant no backoffice.
+
+---
+
+### 1.16 Portal Público do Contribuinte
+
+**RF-CONT-01** A plataforma disponibiliza portal público acessível ao cidadão/contribuinte, sem necessidade de login cadastrado, onde é possível consultar débitos pendentes, emitir 2ª via de boletos e acompanhar o status de pagamentos.
+
+**RF-CONT-02** O acesso é autenticado por CPF, com envio de link temporário por e-mail (token de uso único, validade de 24 horas). Não é permitido acesso sem autenticação por token.
+
+**RF-CONT-03** O CPF é tratado exclusivamente como hash SHA-256 — nunca armazenado em texto claro em nenhuma tabela do sistema (conformidade LGPD).
+
+**RF-CONT-04** O contribuinte autenticado visualiza todos os seus boletos associados, agrupados por município (tenant), exibindo: nome do município, tipo de tributo (via metadados), exercício fiscal, valor original, data de vencimento, status e ação disponível por boleto.
+
+**RF-CONT-05** O contribuinte pode solicitar 2ª via de boleto pendente ou vencido diretamente no portal. A 2ª via emite um **novo boleto** no parceiro bancário com vencimento atualizado (configurável por tenant: manter data original ou acrescentar N dias), mantendo vínculo com o boleto de origem via `parent_boleto_id`. O sistema armazena o histórico completo de todos os boletos gerados para um mesmo débito — o contribuinte visualiza a cadeia de emissões no portal. O `external_ref` da 2ª via é derivado do original (ex.: `{ref}-2via-1`, `{ref}-2via-2`) para garantir unicidade no parceiro bancário.
+
+**RF-CONT-06** Contribuinte com débitos em múltiplos municípios visualiza todos em uma única sessão autenticada, agrupados por município.
+
+**RF-CONT-07** O portal deve ser responsivo para dispositivos móveis.
+
+**RF-CONT-08** O contribuinte é identificado globalmente pelo `cpf_hash` (SHA-256) na entidade `contribuintes`. Um CPF com débitos em dois municípios diferentes corresponde ao mesmo registro de contribuinte na plataforma.
+
+**RF-CONT-09** O isolamento entre tenants é garantido via `boleto.tenant_id`: o contribuinte visualiza seus boletos de qualquer município, mas um tenant nunca acessa boletos de outro tenant.
+
+**RF-CONT-10** Na emissão de cada boleto via API (`POST /api/v1/boletos`), o sistema realiza automaticamente `firstOrCreate` do contribuinte pelo `cpf_hash`, vinculando o boleto ao contribuinte via `contribuinte_id`.
+
+**RF-CONT-11** Rotas públicas do portal:
+```
+GET  /contribuinte                          → tela de entrada (CPF)
+POST /contribuinte/verificar                → envia link por e-mail (token 24h, 1 uso)
+GET  /contribuinte/debitos/{token}          → lista de débitos agrupados por município
+POST /contribuinte/boleto/{id}/2via         → emite 2ª via e redireciona para o novo boleto
+```
+
+**RF-CONT-12** O portal exibe aviso de conformidade LGPD informando quais dados são utilizados e com qual finalidade.
+
+---
+
+### 1.17 Geointeligência
+
+**RF-GEO-01** A plataforma fornece relatório de geointeligência com mapa de calor de inadimplência por bairro, disponível no backoffice do tenant.
+
+**RF-GEO-02** `GET /api/v1/reports/geo` retorna dados no formato GeoJSON com os seguintes indicadores por bairro: total de boletos pendentes, pagos e vencidos, valor total em aberto (R$) e taxa de inadimplência (%). O endpoint aceita filtros por período e status.
+
+**RF-GEO-03** Os dados de bairro são extraídos do campo `payer_address.bairro` (JSON já armazenado nos boletos). Bairros sem correspondência no GeoJSON do tenant são agrupados em categoria `Não identificado`.
+
+**RF-GEO-04** O backoffice exibe o mapa via componente interativo (Leaflet, open-source, sem API key externa), com polígonos dos bairros coloridos por intensidade de inadimplência — gradiente de verde (baixa) a vermelho (alta).
+
+**RF-GEO-05** Os polígonos geográficos de bairros são armazenados por tenant como arquivo GeoJSON estático, carregado no onboarding do município. O sistema não depende de API de mapas externa para funcionamento.
+
+**RF-GEO-06** O usuário pode clicar em um bairro no mapa para visualizar seus detalhes: quantidade de boletos por status, valor total, ticket médio e listagem dos boletos pendentes do bairro.
+
+**RF-GEO-07** O processamento do relatório geográfico é assíncrono para volumes elevados, seguindo o mesmo padrão de RF-50.
+
+**RF-GEO-08** Acesso ao relatório de geointeligência requer escopo `report:read` na API Key ou papel ADMIN/OPERADOR no portal do tenant.
+
+---
+
+### 1.18 Parcelamento e Carnê de Tributo
+
+**RF-PARC-01** O sistema deve suportar emissão de carnê de parcelamento — conjunto de boletos vinculados a um mesmo débito, com vencimentos e valores pré-calculados. O carnê é emitido via `POST /api/v1/boletos/carne`, recebendo:
+- Referência do débito original (`external_ref`)
+- Valor total do débito
+- Número de parcelas (mínimo 2, máximo configurável por tenant)
+- Data do primeiro vencimento
+- Tipo de encargo: `SEM_JUROS`, `JUROS_SIMPLES` ou `JUROS_COMPOSTOS`
+- Taxa de juros ao mês em percentual (obrigatório quando tipo ≠ `SEM_JUROS`)
+- Percentual de desconto por cota única (opcional)
+- Dados do pagador (nome, CPF/CNPJ, e-mail, telefone, endereço)
+- Metadados livres (tipo de tributo, exercício fiscal, inscrição imobiliária)
+
+**RF-PARC-02** O sistema calcula automaticamente o valor de cada parcela antes da emissão:
+- `SEM_JUROS`: valor total ÷ número de parcelas (parcelas iguais)
+- `JUROS_SIMPLES`: valor total × (1 + taxa × número de parcelas) ÷ número de parcelas
+- `JUROS_COMPOSTOS`: valor total × [taxa × (1 + taxa)^n] ÷ [(1 + taxa)^n − 1] (Tabela Price)
+- Entrada diferenciada: quando informada, é descontada do valor total antes do cálculo das parcelas restantes
+- Desconto por cota única: quando o contribuinte opta por pagar o valor total em um único boleto, o desconto configurado é aplicado sobre o valor total
+
+**RF-PARC-03** Cada parcela é emitida como boleto independente no parceiro bancário via `IssueBoletoFromImportJob`, com:
+- `external_ref` derivado do original: `{ref}-parc-01`, `{ref}-parc-02`, ..., `{ref}-parc-N`
+- Vencimento calculado: primeiro vencimento + (número da parcela − 1) mês
+- Vinculação ao conjunto via `installment_plan_id` no banco de dados do Payproxy
+
+O parceiro bancário (PJBank) não tem conhecimento do carnê — gerencia cada boleto de forma independente. A lógica de agrupamento, status consolidado e cancelamento em cascata é inteiramente responsabilidade do Payproxy.
+
+**RF-PARC-04** O pagamento de uma parcela não afeta as demais. O cancelamento do carnê cancela todas as parcelas com status `PENDENTE`, mantendo as já pagas com seus registros históricos.
+
+**RF-PARC-05** `GET /api/v1/boletos/carne/{installment_plan_id}` retorna o status consolidado do carnê:
+- Total de parcelas, pagas, pendentes e vencidas
+- Valor total do débito, valor pago e valor em aberto
+- Lista de parcelas com status, vencimento e valor individual
+
+**RF-PARC-06** O contribuinte visualiza o carnê completo no portal público (RF-CONT), com status de cada parcela e opção de emitir 2ª via de parcela individual vencida ou pendente.
+
+**RF-PARC-07** O carnê pode ser gerado em massa via importação de arquivo (RF-IMP). Cada linha do arquivo representa um contribuinte e deve conter: número de parcelas, valor total, data do primeiro vencimento e tipo de encargo. O sistema gera os boletos de todas as parcelas de todos os contribuintes via fila de jobs, respeitando o limite de concorrência configurado (RF-IMP-15).
+
+**RF-PARC-08** Ao concluir a emissão do carnê, o sistema envia ao contribuinte por e-mail o resumo com: valor total, número de parcelas, calendário de vencimentos e link para o portal onde todos os boletos estão disponíveis para download.
+
+---
+
+### 1.19 App Nativo do Contribuinte
+
+**RF-APP-01**
+A plataforma deve disponibilizar aplicativo móvel nativo para iOS (13+) e Android (8+), desenvolvido em React Native. A entrega é faseada:
+- **PoC:** distribuído via TestFlight (iOS) e APK side-loading (Android) para avaliadores — sem publicação nas lojas
+- **Produção:** publicado na App Store e Google Play após validação da PoC
+
+O app oferece ao contribuinte as mesmas funcionalidades do portal web (RF-CONT-01 a RF-CONT-12): autenticação por CPF via link por e-mail, consulta de débitos por município, emissão de 2ª via, acesso ao carnê de parcelas e histórico de pagamentos.
+
+**RF-APP-02**
+A autenticação segue o mesmo fluxo do portal web: contribuinte informa o CPF, recebe link por e-mail (token de uso único, validade 24h) e acessa o app. O app armazena o token de sessão de forma segura no keychain (iOS) / keystore (Android), com validade configurável (padrão: 7 dias), evitando reautenticação a cada abertura.
+
+**RF-APP-03**
+O app exibe todos os débitos do contribuinte agrupados por município, com: tipo de tributo, exercício, valor atualizado, data de vencimento, status (pendente, pago, vencido) e ação disponível por boleto (2ª via, ver carnê).
+
+**RF-APP-04**
+O app deve oferecer leitor de QR Code Pix via câmera do dispositivo, abrindo o aplicativo de pagamento do banco do contribuinte com os dados pré-preenchidos via deep link.
+
+**RF-APP-05**
+O app deve enviar notificações push ao contribuinte nas seguintes situações:
+- Vencimento em 5 dias (D-5)
+- Vencimento em 1 dia (D-1)
+- Boleto vencido (D+1)
+- Confirmação de pagamento recebido
+- Nova 2ª via disponível
+
+O contribuinte pode configurar quais notificações receber nas preferências do app. As notificações respeitam o opt-out configurado (RF-COB-08).
+
+**RF-APP-06**
+O contribuinte pode compartilhar o código de barras, linha digitável ou PDF do boleto diretamente do app para outros aplicativos (WhatsApp, e-mail, etc.) via mecanismo nativo de compartilhamento do sistema operacional.
+
+**RF-APP-07**
+O app deve armazenar em cache os últimos débitos consultados, permitindo visualização sem conexão à internet. Ações que requerem conexão (2ª via, pagamento) exibem mensagem informativa quando offline.
+
+**RF-APP-08**
+O app deve suportar autenticação biométrica (Face ID / Touch ID / impressão digital) como segundo fator opcional para abrir o app após a sessão inicial autenticada por e-mail.
+
+**RF-APP-09**
+O app deve solicitar apenas as permissões estritamente necessárias ao usuário: câmera (para leitura de QR Code) e notificações push. Nenhum dado pessoal é armazenado permanentemente no dispositivo além do token de sessão — em conformidade com LGPD e políticas da App Store e Google Play.
+
+---
+
+### 1.20 Modelo de Dados Tributários
+
+**RF-TRIB-01**
+O campo `metadata` do boleto deve reconhecer e validar o tipo de tributo via `metadata.tipo_tributo`. Valores aceitos na PoC: `IPTU`, `ISS`, `TFF`, `TAXA`, `DIVIDA_ATIVA`, `OUTROS`. Valores fora dessa lista são rejeitados com erro `422`. Novos tipos podem ser incorporados sem alteração na API — a lista é configurável por versão da plataforma.
+
+**RF-TRIB-02**
+Campos obrigatórios em `metadata` por tipo de tributo, validados no momento da emissão:
+
+| Tipo | Campos obrigatórios |
+|---|---|
+| `IPTU` | `inscricao_imobiliaria`, `exercicio`, `parcela` |
+| `ISS` | `inscricao_mobiliaria`, `competencia` |
+| `TFF` | `inscricao_mobiliaria`, `exercicio` |
+| `TAXA` | `exercicio`, `descricao_taxa` |
+| `DIVIDA_ATIVA` | `exercicio`, `numero_cda`, `tipo_tributo_origem` |
+| `OUTROS` | nenhum campo adicional obrigatório |
+
+**RF-TRIB-03**
+Cada tenant pode configurar encargos específicos por tipo de tributo: percentual de multa, juros ao mês e desconto máximo permitido. Quando configurado por tipo, sobrepõe os encargos padrão do tenant (RF-08).
+
+**RF-TRIB-04**
+Os relatórios (RF-44 a RF-48), a régua de cobrança (RF-COB) e o mapa de geointeligência (RF-GEO) segmentam e filtram dados por `metadata.tipo_tributo` automaticamente.
+
+---
+
+### 1.21 Reporte de Inconsistência Cadastral
+
+O Payproxy não é a fonte de verdade dos dados cadastrais do contribuinte — essa responsabilidade é do sistema tributário (GRP) da SEFAZ. Os dados chegam ao Payproxy via importação de lançamentos (RF-IMP). Portanto, o Payproxy atua exclusivamente como **canal de comunicação** para reportar inconsistências ao operador da SEFAZ, que realiza a correção no GRP. Na próxima importação, os dados corretos chegam automaticamente ao Payproxy.
+
+**RF-INC-01**
+O portal do contribuinte e o app devem oferecer formulário de reporte de inconsistência cadastral, permitindo ao contribuinte informar: campo com dado incorreto (nome, endereço, e-mail, telefone), descrição da inconsistência e upload opcional de documento comprobatório (JPG/PNG/PDF, máx. 5 MB).
+
+**RF-INC-02**
+O reporte gera um ticket no backoffice do tenant com status `PENDENTE`, exibindo: dados atuais no Payproxy, descrição da inconsistência informada pelo contribuinte e documento anexado. O Payproxy **não altera nenhum dado cadastral** — o ticket serve apenas para notificar o operador.
+
+**RF-INC-03**
+O operador da SEFAZ analisa o ticket no backoffice e executa uma das ações:
+- **Encaminhar ao GRP:** marca o ticket como `ENCAMINHADO`, indicando que a correção foi realizada no sistema tributário. O contribuinte recebe e-mail confirmando que o reporte foi recebido e está sendo tratado.
+- **Rejeitar:** marca como `REJEITADO` com motivo obrigatório. O contribuinte recebe e-mail com o motivo da rejeição.
+
+**RF-INC-04**
+Após a correção no GRP e a próxima importação de lançamentos, os dados atualizados chegam ao Payproxy automaticamente via RF-IMP. O Payproxy não realiza nenhuma sincronização ativa com o GRP.
+
+**RF-INC-05**
+Tickets sem resposta do operador após prazo configurável (padrão: 5 dias úteis) geram alerta no backoffice ao gestor do tenant.
+
+---
+
+### 1.22 CzRM — Jornada do Cidadão
+
+**RF-CRM-01** A plataforma deve disponibilizar timeline unificada da jornada do contribuinte, consolidando todos os eventos relacionados ao seu CPF em ordem cronológica decrescente.
+
+**RF-CRM-02** Os eventos exibidos na timeline são construídos a partir das tabelas existentes, sem armazenamento adicional:
+
+| Evento | Origem |
+|---|---|
+| Boleto emitido | `boletos` |
+| E-mail enviado | `boleto_notifications` |
+| WhatsApp enviado | `boleto_notifications` |
+| Boleto visualizado no portal | `contribuinte_access_tokens` |
+| AR Digital lido / entregue / confirmado | `ar_digital_events` |
+| Pagamento recebido | `boletos` (status `PAGO`) |
+| 2ª via solicitada | `boletos` (`parent_boleto_id` preenchido) |
+
+**RF-CRM-03** No portal do contribuinte, a timeline é exibida como aba "Histórico" na sessão autenticada (`GET /contribuinte/debitos/{token}`), sem necessidade de novo login. O contribuinte visualiza apenas os eventos do seu próprio CPF no tenant correspondente ao link de acesso.
+
+**RF-CRM-04** No backoffice, a timeline é acessível via seção "Contribuintes":
+```
+GET /backoffice/contribuintes              → busca por CPF (hash SHA-256 interno)
+GET /backoffice/contribuintes/{cpf_hash}  → timeline completa do contribuinte
+```
+O operador visualiza todos os eventos do contribuinte dentro do seu tenant. A busca aceita CPF formatado ou não — o sistema calcula o hash internamente antes de consultar.
+
+---
+
+### 1.23 Segurança & Conformidade LGPD
+
+#### 1.23.1 Portal do Titular (Art. 18 LGPD)
+
+**RF-LGPD-01** A plataforma deve disponibilizar portal público do titular de dados, acessível pelo contribuinte para exercer seus direitos previstos no Art. 18 da LGPD, sem necessidade de cadastro prévio. Rotas públicas:
+```
+GET  /titular/verificar                    → tela de verificação por CPF
+POST /titular/verificar                    → envia link por e-mail (token 24h, uso único)
+GET  /titular/dados/{token}                → exibe dados do titular
+POST /titular/exportar/{token}             → gera PDF com todos os dados associados ao CPF
+POST /titular/solicitar-exclusao/{token}   → abre ticket de anonimização no backoffice
+```
+
+**RF-LGPD-02** O acesso ao portal do titular é autenticado por CPF + link temporário enviado por e-mail (token de uso único, validade 24 horas), sem senha ou cadastro. O token é armazenado na tabela `titular_access_tokens` com `cpf_hash`, `expires_at` e `used_at`.
+
+**RF-LGPD-03** O portal do titular exibe todos os boletos associados ao CPF informado, agrupados por tenant (município), com: data de emissão, valor, status, tipo de tributo e canal de pagamento utilizado quando liquidado.
+
+**RF-LGPD-04** A solicitação de exclusão de dados gera ticket no backoffice com status `PENDENTE`. A exclusão é implementada como **anonimização** — nunca deleção — com aviso explícito ao titular de que dados fiscais são retidos por 5 anos conforme CTN Art. 195. O administrador executa a anonimização no backoffice após análise.
+
+---
+
+#### 1.23.2 Mascaramento de Dados Pessoais
+
+**RF-LGPD-05** CPF, e-mail e telefone dos pagadores devem ser exibidos mascarados por padrão em todas as telas do backoffice e portal do tenant:
+
+| Dado | Formato mascarado |
+|---|---|
+| CPF | `***.456.789-**` |
+| E-mail | `r***@dominio.com.br` |
+| Telefone | `(79) *****-2868` |
+
+**RF-LGPD-06** Usuários com papel `ADMIN` podem visualizar o dado completo clicando em "exibir". Cada visualização de dado completo registra entrada na trilha de auditoria com: usuário, dado acessado, IP e timestamp.
+
+---
+
+#### 1.23.3 Consentimento para WhatsApp
+
+**RF-LGPD-07** O envio de mensagens via WhatsApp deve ser condicionado à existência de consentimento rastreável registrado na tabela `whatsapp_consents`, com os campos: `tenant_id`, `cpf_hash` (SHA-256), `phone_hash` (SHA-256), `consented_at`, `consent_ip`, `revoked_at`, `revocation_ip`.
+
+**RF-LGPD-08** Toda mensagem WhatsApp enviada ao contribuinte deve incluir link de opt-out que registra a revogação do consentimento em `whatsapp_consents.revoked_at`. Após revogação, nenhuma mensagem WhatsApp deve ser enviada até novo consentimento explícito.
+
+---
+
+#### 1.23.4 Retenção e Expurgo de Dados
+
+**RF-LGPD-09** O sistema deve executar rotina semanal de retenção de dados via command `php artisan data:retention`, com suporte a flag `--dry-run` para simulação sem alteração. A rotina aplica as seguintes políticas:
+
+| Dado | Retenção | Ação após prazo |
+|---|---|---|
+| Dados fiscais do boleto (valor, vencimento, referência, tributo) | 5 anos (CTN Art. 195) | Manter — nunca anonimizar |
+| Dados pessoais do pagador (nome, CPF, e-mail, telefone, endereço) | 5 anos do vencimento | Anonimizar: substituir por `NULL` |
+| Eventos AR Digital (e-mail, telefone) | 5 anos | Anonimizar campos pessoais; manter carimbos RFC 3161 |
+| Trilha de auditoria (`audit_logs`) | 2 anos | Exclusão definitiva |
+| API Keys revogadas | 90 dias após revogação | Exclusão definitiva |
+
+**RF-LGPD-10** Cada execução da rotina de retenção registra em `audit_logs`: total de registros analisados, total anonimizados, total excluídos e eventuais erros.
+
+---
+
+#### 1.23.5 Notificação de Incidente de Segurança (Art. 48 LGPD)
+
+**RF-LGPD-11** O backoffice deve disponibilizar tela de abertura de incidente de segurança com os campos: descrição, data de descoberta, categorias de dados afetados, estimativa de titulares impactados e medidas de contenção adotadas.
+
+**RF-LGPD-12** Ao abrir um incidente, o sistema exibe countdown de **72 horas** para notificação obrigatória à ANPD (Art. 48 LGPD), com registro de timeline: data de descoberta, data de contenção e data de notificação à ANPD.
+
+---
+
+#### 1.23.6 Painel ROT/RIPD — Integração com Datum via LGPD Gateway
+
+O sistema de gestão LGPD adotado pelos municípios parceiros na PoC é o **Datum** (plataforma de governança LGPD municipal). O **LGPD Gateway** — projeto Laravel independente mantido pela Ciberian — atua como middleware entre o Payproxy e o Datum instalado no servidor de cada prefeitura. O Gateway expõe uma API normalizada via Strategy Pattern: adicionar um novo município exige apenas uma nova Strategy no Gateway, sem nenhuma alteração no Payproxy.
+
+**RF-LGPD-13** O backoffice deve exibir, por tenant, o painel de governança LGPD consultado ao **LGPD Gateway** via `DatumService`, que por sua vez lê os dados diretamente do **Datum** do município. Painel acessível em `/backoffice/tenants/{tenant}/lgpd`. O painel exibe duas seções:
+- **ROT — Registro de Operações de Tratamento:** lista de operações com operação, categorias de dados, finalidade, base legal e status de conformidade.
+- **RIPD — Relatório de Impacto à Proteção de Dados:** lista de relatórios de impacto com título, operações avaliadas, nível de risco identificado e status (`Rascunho` / `Finalizado` / `Assinado`). O RIPD é exigido pelo Art. 38 LGPD para operações de alto risco — o Payproxy exibe o status mas nunca elabora o relatório, responsabilidade do DPO do tenant no Datum.
+
+**RF-LGPD-14** O painel ROT/RIPD é **somente leitura** no Payproxy. O cadastro e manutenção das operações de tratamento e dos relatórios de impacto é responsabilidade do DPO do tenant no **Datum**. O Payproxy nunca cadastra, edita ou exclui dados de ROT ou RIPD diretamente.
+
+**RF-LGPD-15** Tenant sem Datum conectado ao LGPD Gateway (`LGPD_GATEWAY_URL` não definido ou tenant sem Strategy configurada) exibe mensagem informativa no painel: *"Governança LGPD não configurada para este tenant."* — sem erro ou quebra de fluxo.
+
+---
+
 ## 2. Requisitos Não Funcionais
 
 ### 2.1 Disponibilidade e Performance
@@ -467,6 +839,14 @@ segredo configurado pelo tenant.
 ser tratados em conformidade com a LGPD (Lei nº 13.709/2018), com acesso controlado e
 registrado.
 
+**RNF-27** Todas as respostas HTTP da plataforma devem incluir os seguintes cabeçalhos de segurança: `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, `Referrer-Policy: strict-origin-when-cross-origin` e `Permissions-Policy: geolocation=(), microphone=(), camera=()`.
+
+**RNF-28** As rotas de login do backoffice e do portal do tenant devem aplicar rate limiting de **5 tentativas por IP a cada 15 minutos**. Após atingir o limite, a resposta deve informar o tempo restante para nova tentativa (`retry_after`). O rate limiting é independente do controle por API Key (RNF-13).
+
+**RNF-29** O sistema deve suportar configuração de **IP Allowlist por tenant**: campo `allowed_ips` (JSON, nullable) na tabela `tenants`. Quando preenchido, requisições à API originadas de IPs fora da lista são bloqueadas com HTTP 403 e registradas na trilha de auditoria. Quando vazio, o acesso é permitido de qualquer IP.
+
+**RNF-30** API Keys devem suportar data de expiração configurável (`expires_at`). Um job diário expira automaticamente as keys vencidas (status `expired`). Notificações por e-mail são enviadas ao tenant **15 dias** e **7 dias** antes da expiração. Requisições com key expirada recebem HTTP 401 com mensagem informativa.
+
 ### 2.3 Conformidade e Interoperabilidade
 
 **RNF-15** Os boletos devem seguir o padrão CNAB FEBRABAN, com suporte explícito aos layouts **CNAB 240** e **CNAB 400** para liquidação e conciliação bancária.
@@ -504,6 +884,10 @@ de operação.
 | **Alta** | Plataforma totalmente indisponível, falha na comunicação DDA, falha no processo de liquidação | ≤ 1 hora | ≤ 4 horas | 24×7 |
 | **Média** | Relatórios indisponíveis, instabilidade intermitente, degradação de performance | ≤ 4 horas | ≤ 12 horas | Horário comercial (8h–18h) |
 | **Baixa** | Dúvidas operacionais, ajustes de interface, extração de dados | ≤ 12 horas | ≤ 24 horas | Horário comercial (8h–18h) |
+
+### 2.5 Retenção de Dados
+
+**RNF-31** Os dados fiscais dos boletos — valor, data de vencimento, referência externa, tipo de tributo, nosso número bancário e splits aplicados — devem ser retidos por **mínimo de 5 anos** a partir da data de emissão, em conformidade com o CTN Art. 195, permanecendo legíveis e consultáveis pelo backoffice durante todo esse período. A anonimização de dados pessoais do pagador (RF-LGPD-09) não deve afetar os campos de natureza fiscal.
 
 ---
 
@@ -549,4 +933,5 @@ principal do tenant.
 | Parceiro Bancário (ex.: PJBank, outros) | Emissão, registro, consulta e cancelamento de boletos; registro DDA; webhook de pagamento | Bidirecional |
 | Sistema do Tenant (ERP/Tributário) | Consumo da API de boletos; recebimento de webhooks de pagamento | Bidirecional |
 | FEBRABAN / Rede Bancária | Liquidação efetiva dos boletos pelos canais de pagamento | Indireto (via parceiro bancário) |
+| OVC360 / Ouvimos | Envio de notificações WhatsApp via BSP Meta credenciado | Saída |
 

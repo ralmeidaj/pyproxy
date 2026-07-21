@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGPD Gateway — Arquitetura do Sistema</title>
+<style>
+  /* ── Design tokens ─────────────────────────────── */
+  :root {
+    --ground:   #e4edf5;
+    --surface:  #ffffff;
+    --text:     #162235;
+    --text-dim: #4a6278;
+    --accent:   #1a4d8f;
+    --accent-2: #c84b31;
+    --border:   #b8cede;
+    --shadow:   0 2px 12px rgba(22,34,53,0.10);
+    --mono:     'Courier New', 'Lucida Console', monospace;
+    --sans:     'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  /* ── Reset & Base ──────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--ground);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  /* ── Layout ────────────────────────────────────── */
+  .page-wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── Dot-grid background ───────────────────────── */
+  .dot-grid-bg {
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* ── Header ────────────────────────────────────── */
+  .site-header {
+    background: var(--accent);
+    color: #fff;
+    padding: 40px 0 36px;
+    border-bottom: 4px solid #0d3363;
+  }
+  .site-header .page-wrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .header-title-group {}
+  .header-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 10px;
+  }
+  .header-title {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: normal;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .header-title strong { color: #7cb8f0; font-weight: normal; }
+  .header-subtitle {
+    margin-top: 8px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.75);
+    max-width: 540px;
+    line-height: 1.5;
+  }
+  .header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .header-meta-item {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.06em;
+  }
+  .header-promise {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.09);
+    border-left: 3px solid #7cb8f0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: rgba(255,255,255,0.90);
+    max-width: 620px;
+    line-height: 1.55;
+  }
+  .header-promise em { color: #7cb8f0; font-style: normal; }
+
+  /* ── Section headings ─────────────────────────── */
+  .section { padding: 56px 0; }
+  .section + .section { border-top: 1px solid var(--border); }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 28px;
+    line-height: 1.25;
+  }
+
+  /* ── Architecture diagram ─────────────────────── */
+  .arch-section {
+    background: var(--accent);
+    padding: 48px 0 52px;
+  }
+  .arch-section .section-label { color: rgba(255,255,255,0.55); }
+  .arch-section .section-title { color: #fff; margin-bottom: 36px; }
+  .arch-diagram-wrap {
+    background: #0d3363;
+    border-radius: 6px;
+    padding: 40px 32px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .arch-diagram-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(124,184,240,0.18) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+  }
+  .arch-diagram { position: relative; z-index: 1; }
+
+  /* SVG diagram */
+  #arch-svg { width: 100%; overflow: visible; display: block; }
+
+  /* ── Component cards ──────────────────────────── */
+  .component-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 680px) { .component-grid { grid-template-columns: 1fr; } }
+  .component-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 28px 28px 32px;
+    box-shadow: var(--shadow);
+  }
+  .component-card.card-connector { border-top-color: #2a7d4e; }
+  .component-card-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  .tag-gateway { background: #dce9f7; color: var(--accent); }
+  .tag-connector { background: #d8f0e3; color: #1e6642; }
+  .component-card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .component-card p { font-size: 14px; color: var(--text-dim); line-height: 1.6; margin-bottom: 16px; }
+  .component-card p:last-child { margin-bottom: 0; }
+  .attr-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .attr-list li {
+    font-size: 13px;
+    color: var(--text-dim);
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.45;
+  }
+  .attr-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--border);
+    font-family: var(--mono);
+  }
+  .attr-list li strong { color: var(--text); font-weight: 600; }
+
+  /* ── Flow steps ───────────────────────────────── */
+  .flow-steps { display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 0 20px;
+    position: relative;
+  }
+  .flow-step:not(:last-child) .flow-step-line {
+    position: absolute;
+    left: 23px;
+    top: 48px;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .flow-step-num {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--accent);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .flow-step-body {
+    padding: 10px 0 40px;
+  }
+  .flow-step-body h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .flow-step-body p { font-size: 13.5px; color: var(--text-dim); line-height: 1.55; }
+  .code-inline {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #dce9f7;
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .flow-step-body .code-block {
+    margin-top: 10px;
+    background: #f0f5fa;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: #2a4a6a;
+    line-height: 1.7;
+    border-radius: 0 3px 3px 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ── API table ────────────────────────────────── */
+  .api-table-wrap { overflow-x: auto; }
+  .api-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .api-table thead tr {
+    background: var(--text);
+    color: #fff;
+  }
+  .api-table thead th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: normal;
+  }
+  .api-table tbody tr { border-bottom: 1px solid var(--border); }
+  .api-table tbody tr:nth-child(even) { background: #f0f5fa; }
+  .api-table tbody tr:hover { background: #dce9f7; }
+  .api-table tbody td { padding: 11px 16px; vertical-align: top; }
+  .method-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 7px;
+    border-radius: 3px;
+    display: inline-block;
+    white-space: nowrap;
+  }
+  .method-get { background: #d8f0e3; color: #1e6642; }
+  .method-post { background: #fff3d6; color: #a05c00; }
+  .route-cell { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
+  .auth-badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 2px 6px;
+    background: var(--ground);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .auth-admin { background: #fce8e3; border-color: #e0b0a8; color: #8b2a1a; }
+  .desc-cell { color: var(--text-dim); font-size: 13px; }
+
+  /* ── Response headers ─────────────────────────── */
+  .header-cards { display: flex; flex-direction: column; gap: 12px; }
+  .header-card {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .header-card-key {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    background: #f0f5fa;
+    padding: 12px 16px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+  }
+  .header-card-val { padding: 12px 16px; font-size: 13px; color: var(--text-dim); }
+  .header-card-val strong { color: var(--text); font-weight: 600; }
+
+  /* ── Fault isolation callout ──────────────────── */
+  .callout {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 0 4px 4px 0;
+    padding: 20px 24px;
+    margin: 28px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .callout-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    line-height: 1.3;
+  }
+  .callout-body h4 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+  .callout-body p { font-size: 13.5px; color: var(--text-dim); line-height: 1.55; }
+
+  /* ── Non-functional cards ─────────────────────── */
+  .nfr-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 720px) { .nfr-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .nfr-grid { grid-template-columns: 1fr; } }
+  .nfr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 20px 22px;
+  }
+  .nfr-card-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+  .nfr-card h4 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .nfr-card p { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
+  .nfr-value { font-family: var(--mono); font-size: 18px; color: var(--accent); font-weight: bold; display: block; margin-bottom: 4px; }
+
+  /* ── Footer ───────────────────────────────────── */
+  .site-footer {
+    background: var(--text);
+    color: rgba(255,255,255,0.55);
+    padding: 28px 0;
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .site-footer .page-wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .site-footer a { color: rgba(255,255,255,0.70); }
+
+  /* ── Print ────────────────────────────────────── */
+  @media print {
+    .arch-section { background: #fff; }
+    .arch-diagram-wrap { background: #f0f5fa; }
+    body { background: #fff; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ────────────────────────────────────── -->
+<header class="site-header">
+  <div class="page-wrap">
+    <div class="header-title-group">
+      <div class="header-eyebrow">Ciberian · Documento de Arquitetura · v1.0</div>
+      <h1 class="header-title">LGPD Gateway — <strong>Arquitetura do Sistema</strong></h1>
+      <p class="header-subtitle">
+        Middleware Laravel que conecta o Payproxy aos sistemas LGPD de cada município,
+        sem criar dependência entre eles.
+      </p>
+      <div class="header-promise">
+        Adicionar um novo município requer <em>zero alterações no Payproxy</em> —
+        apenas uma nova Strategy no Gateway e um Connector instalado no servidor do cliente.
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="header-meta-item">DATA: 2026-07-03</span>
+      <span class="header-meta-item">STATUS: ESPECIFICADO</span>
+      <span class="header-meta-item">PARCEIRO v1: DATUM LGPD</span>
+      <span class="header-meta-item">COMPONENTES: 2</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── ARCHITECTURE DIAGRAM ─────────────────────── -->
+<section class="arch-section">
+  <div class="page-wrap">
+    <div class="section-label">Visão Geral</div>
+    <h2 class="section-title">Como os sistemas se conectam</h2>
+    <div class="arch-diagram-wrap dot-grid-bg">
+      <div class="arch-diagram">
+        <svg id="arch-svg" viewBox="0 0 960 460" xmlns="http://www.w3.org/2000/svg" aria-label="Diagrama de arquitetura do LGPD Gateway">
+          <defs>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#7cb8f0" />
+            </marker>
+            <marker id="arrow-dim" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4a7a9b" />
+            </marker>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- ── PAYPROXY ── -->
+          <rect x="330" y="10" width="300" height="72" rx="4" fill="#1a4d8f" stroke="#7cb8f0" stroke-width="1.5"/>
+          <text x="480" y="38" font-family="'Courier New', monospace" font-size="11" fill="rgba(255,255,255,0.5)" text-anchor="middle" letter-spacing="2">SISTEMA CONSUMIDOR</text>
+          <text x="480" y="60" font-family="'Courier New', monospace" font-size="17" font-weight="bold" fill="#ffffff" text-anchor="middle">Payproxy</text>
+
+          <!-- ── arrow down Payproxy → Gateway ── -->
+          <line x1="480" y1="82" x2="480" y2="130" stroke="#7cb8f0" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
+          <rect x="354" y="93" width="252" height="22" rx="3" fill="#0d3363"/>
+          <text x="480" y="108" font-family="'Courier New', monospace" font-size="10" fill="#7cb8f0" text-anchor="middle">HTTPS · X-Api-Key · tenant_id</text>
+
+          <!-- ── GATEWAY box ── -->
+          <rect x="200" y="132" width="560" height="118" rx="5" fill="#1a4d8f" stroke="#7cb8f0" stroke-width="2" filter="url(#glow)"/>
+          <text x="480" y="158" font-family="'Courier New', monospace" font-size="10" fill="rgba(255,255,255,0.5)" text-anchor="middle" letter-spacing="2">LGPD GATEWAY · Laravel 11 · Infra Ciberian</text>
+          <text x="480" y="180" font-family="'Courier New', monospace" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">DatumGatewayService</text>
+
+          <!-- ── sub-components inside gateway ── -->
+          <rect x="222" y="196" width="190" height="38" rx="3" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+          <text x="317" y="211" font-family="'Courier New', monospace" font-size="10" fill="#7cb8f0" text-anchor="middle">STRATEGY FACTORY</text>
+          <text x="317" y="226" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.55)" text-anchor="middle">tenant_id → Strategy correta</text>
+
+          <rect x="430" y="196" width="160" height="38" rx="3" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+          <text x="510" y="211" font-family="'Courier New', monospace" font-size="10" fill="#7cb8f0" text-anchor="middle">REDIS CACHE</text>
+          <text x="510" y="226" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.55)" text-anchor="middle">TTL 5min · isolado por tenant</text>
+
+          <rect x="608" y="196" width="130" height="38" rx="3" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+          <text x="673" y="211" font-family="'Courier New', monospace" font-size="10" fill="#7cb8f0" text-anchor="middle">AUDIT LOG</text>
+          <text x="673" y="226" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.55)" text-anchor="middle">gateway_logs</text>
+
+          <!-- ── arrows Gateway → Connectors ── -->
+          <line x1="290" y1="250" x2="130" y2="310" stroke="#4a7a9b" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-dim)"/>
+          <line x1="480" y1="250" x2="480" y2="310" stroke="#4a7a9b" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-dim)"/>
+          <line x1="660" y1="250" x2="820" y2="310" stroke="#4a7a9b" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-dim)"/>
+
+          <!-- ── CONNECTOR: Salvador ── -->
+          <rect x="20" y="312" width="215" height="74" rx="4" fill="#0d3363" stroke="#4a7a9b" stroke-width="1.5"/>
+          <text x="128" y="333" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle" letter-spacing="1.5">DATUM CONNECTOR · .NET 8</text>
+          <text x="128" y="353" font-family="'Courier New', monospace" font-size="13" font-weight="bold" fill="#7cb8f0" text-anchor="middle">Salvador</text>
+          <text x="128" y="370" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.40)" text-anchor="middle">SEFAZ · orgao_id: SSA-001</text>
+          <text x="128" y="384" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.30)" text-anchor="middle">servidor da prefeitura</text>
+
+          <!-- ── CONNECTOR: Alagoinhas ── -->
+          <rect x="372" y="312" width="215" height="74" rx="4" fill="#0d3363" stroke="#4a7a9b" stroke-width="1.5"/>
+          <text x="480" y="333" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle" letter-spacing="1.5">DATUM CONNECTOR · .NET 8</text>
+          <text x="480" y="353" font-family="'Courier New', monospace" font-size="13" font-weight="bold" fill="#7cb8f0" text-anchor="middle">Alagoinhas</text>
+          <text x="480" y="370" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.40)" text-anchor="middle">Prefeitura · orgao_id: ALA-001</text>
+          <text x="480" y="384" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.30)" text-anchor="middle">servidor da prefeitura</text>
+
+          <!-- ── CONNECTOR: New ── -->
+          <rect x="722" y="312" width="218" height="74" rx="4" fill="#0d3363" stroke="#4a7a9b" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="831" y="333" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.30)" text-anchor="middle" letter-spacing="1.5">DATUM CONNECTOR · .NET 8</text>
+          <text x="831" y="353" font-family="'Courier New', monospace" font-size="13" fill="rgba(124,184,240,0.45)" text-anchor="middle">Próximo município</text>
+          <text x="831" y="370" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.25)" text-anchor="middle">Nova Strategy + .env</text>
+          <text x="831" y="384" font-family="'Courier New', monospace" font-size="9" fill="rgba(255,255,255,0.20)" text-anchor="middle">zero alterações no Gateway</text>
+
+          <!-- ── arrows Connectors → SQL Server ── -->
+          <line x1="128" y1="386" x2="128" y2="416" stroke="#2a4a6a" stroke-width="1" marker-end="url(#arrow-dim)"/>
+          <line x1="480" y1="386" x2="480" y2="416" stroke="#2a4a6a" stroke-width="1" marker-end="url(#arrow-dim)"/>
+          <line x1="831" y1="386" x2="831" y2="416" stroke="#2a4a6a" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow-dim)"/>
+
+          <!-- ── SQL SERVERS ── -->
+          <rect x="30" y="418" width="196" height="32" rx="3" fill="rgba(255,255,255,0.05)" stroke="#2a4a6a" stroke-width="1"/>
+          <text x="128" y="439" font-family="'Courier New', monospace" font-size="11" fill="rgba(255,255,255,0.40)" text-anchor="middle">SQL Server · Datum</text>
+
+          <rect x="384" y="418" width="192" height="32" rx="3" fill="rgba(255,255,255,0.05)" stroke="#2a4a6a" stroke-width="1"/>
+          <text x="480" y="439" font-family="'Courier New', monospace" font-size="11" fill="rgba(255,255,255,0.40)" text-anchor="middle">SQL Server · Datum</text>
+
+          <rect x="737" y="418" width="188" height="32" rx="3" fill="rgba(255,255,255,0.03)" stroke="#2a4a6a" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="831" y="439" font-family="'Courier New', monospace" font-size="11" fill="rgba(255,255,255,0.20)" text-anchor="middle">SQL Server · Datum</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── COMPONENTS ─────────────────────────────────── -->
+<section class="section">
+  <div class="page-wrap">
+    <div class="section-label">Componentes</div>
+    <h2 class="section-title">Dois projetos, duas responsabilidades</h2>
+    <div class="component-grid">
+
+      <div class="component-card">
+        <span class="component-card-tag tag-gateway">LGPD Gateway — Ciberian</span>
+        <h3>DatumGatewayService<br>Laravel 11 · PHP 8.3+</h3>
+        <p>Roda na infraestrutura Ciberian. Recebe todas as requisições do Payproxy, resolve a Strategy correta pelo <code class="code-inline">tenant_id</code>, gerencia cache Redis e isola falhas entre clientes.</p>
+        <ul class="attr-list">
+          <li><strong>Strategy Factory</strong> — mapeia tenant_id → classe Strategy via <code class="code-inline">config/datum_clients.php</code></li>
+          <li><strong>Cache Redis</strong> — TTL configurável por tenant (padrão: 5 min); header <code class="code-inline">X-Cache: HIT/MISS</code></li>
+          <li><strong>Fault isolation</strong> — falha de um Connector não propaga para outros tenants</li>
+          <li><strong>Audit log</strong> — tabela <code class="code-inline">gateway_logs</code> registra toda requisição</li>
+          <li><strong>Alerta por e-mail</strong> — após 5 falhas consecutivas (configurável)</li>
+        </ul>
+      </div>
+
+      <div class="component-card card-connector">
+        <span class="component-card-tag tag-connector">Datum Connector — cliente</span>
+        <h3>WebAPI template<br>.NET 8 · instalado on-premise</h3>
+        <p>Template fornecido pela Ciberian. Instalado no servidor de cada município. Lê ROT e RIPD diretamente do SQL Server do Datum e os expõe via REST — o Gateway nunca acessa o banco diretamente.</p>
+        <ul class="attr-list">
+          <li><strong>Autenticação</strong> — <code class="code-inline">X-Api-Key</code>, key gerada na instalação</li>
+          <li><strong>Repository por versão</strong> — <code class="code-inline">RotRepositoryV1</code>, <code class="code-inline">RotRepositoryV2</code> — atualização do Datum não quebra o Gateway</li>
+          <li><strong>Allowlist de órgãos</strong> — <code class="code-inline">orgao_id</code> validado no <code class="code-inline">appsettings.json</code>; outros retornam 403</li>
+          <li><strong>Deploy</strong> — Docker (recomendado) ou IIS (Windows Server)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── API ENDPOINTS ──────────────────────────────── -->
+<section class="section" style="background: var(--surface);">
+  <div class="page-wrap">
+    <div class="section-label">Referência da API</div>
+    <h2 class="section-title">Endpoints expostos ao Payproxy</h2>
+
+    <div class="api-table-wrap">
+      <table class="api-table">
+        <thead>
+          <tr>
+            <th>Método</th>
+            <th>Rota</th>
+            <th>Auth</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td class="route-cell">/api/rot?tenant_id={id}</td>
+            <td><span class="auth-badge">X-Api-Key</span></td>
+            <td class="desc-cell">Retorna itens do ROT do tenant — operações de tratamento de dados, base legal, DPO responsável.</td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td class="route-cell">/api/ripd?tenant_id={id}</td>
+            <td><span class="auth-badge">X-Api-Key</span></td>
+            <td class="desc-cell">Retorna relatórios de impacto (RIPD) do tenant — nível de risco, status (Rascunho / Finalizado / Assinado).</td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td class="route-cell">/api/health?tenant_id={id}</td>
+            <td><span class="auth-badge">X-Api-Key</span></td>
+            <td class="desc-cell">Status do Connector do tenant — online/offline, versão Datum, latência em ms.</td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td class="route-cell">/api/tenants</td>
+            <td><span class="auth-badge auth-admin">X-Admin-Key</span></td>
+            <td class="desc-cell">Lista todos os tenants configurados com status de conectividade. Uso restrito à equipe Ciberian.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:15px; font-weight:700; color:var(--text); margin:36px 0 14px;">Headers de resposta</h3>
+    <div class="header-cards">
+      <div class="header-card">
+        <div class="header-card-key">X-Cache</div>
+        <div class="header-card-val"><strong>HIT</strong> — servido do Redis · <strong>MISS</strong> — consultou o Connector</div>
+      </div>
+      <div class="header-card">
+        <div class="header-card-key">X-Cache-TTL</div>
+        <div class="header-card-val">Segundos restantes no cache para esta chave. Ex.: <strong>247</strong></div>
+      </div>
+      <div class="header-card">
+        <div class="header-card-key">X-Datum-Status</div>
+        <div class="header-card-val"><strong>ok</strong> — resposta fresca · <strong>cached</strong> — Connector indisponível, usando cache · <strong>unavailable</strong> — sem dados</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:32px;">
+      <div class="callout-icon">&#9888;</div>
+      <div class="callout-body">
+        <h4>O Gateway nunca retorna HTTP 5xx ao Payproxy</h4>
+        <p>Connector indisponível → Gateway usa cache (se existir) e retorna 200 com <code class="code-inline">X-Datum-Status: cached</code>.
+        Cache expirado → retorna 200 com <code class="code-inline">status: unavailable</code> e array vazio.
+        O Payproxy nunca é impactado pela infraestrutura de um município.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW TO ADD CLIENT ──────────────────────────── -->
+<section class="section">
+  <div class="page-wrap">
+    <div class="section-label">Processo</div>
+    <h2 class="section-title">Como adicionar um novo município</h2>
+    <p style="font-size:14px; color:var(--text-dim); margin-bottom:36px; max-width:600px;">
+      Estimativa: menos de 1 dia de trabalho da equipe Ciberian. Nenhuma linha de código no Payproxy precisa ser alterada.
+    </p>
+
+    <div class="flow-steps">
+
+      <div class="flow-step">
+        <div class="flow-step-line"></div>
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-body">
+          <h4>Criar a classe Strategy no Gateway</h4>
+          <p>Implementar <code class="code-inline">DatumStrategyInterface</code> com os métodos <code class="code-inline">getRotItems()</code>, <code class="code-inline">getRipdReports()</code> e <code class="code-inline">healthCheck()</code>. A classe faz a chamada HTTP ao Connector do município.</p>
+          <div class="code-block">// app/Services/Strategies/JaguariunaDatumStrategy.php
+class JaguariunaDatumStrategy implements DatumStrategyInterface
+{
+    public function getRotItems(string $orgaoId): array { ... }
+    public function getRipdReports(string $orgaoId): array { ... }
+    public function healthCheck(): array { ... }
+}</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-step-line"></div>
+        <div class="flow-step-num">2</div>
+        <div class="flow-step-body">
+          <h4>Registrar em config/datum_clients.php</h4>
+          <p>Mapear o <code class="code-inline">tenant_id</code> do Payproxy para a nova Strategy e as credenciais do Connector.</p>
+          <div class="code-block">'3' => [
+    'strategy'  => JaguariunaDatumStrategy::class,
+    'url'       => env('DATUM_JAGUARIUNA_URL'),
+    'api_key'   => env('DATUM_JAGUARIUNA_KEY'),
+    'orgao_id'  => env('DATUM_JAGUARIUNA_ORGAO_ID'),
+    'timeout'   => 5,    // segundos
+    'cache_ttl' => 300,  // 5 minutos
+],</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-step-line"></div>
+        <div class="flow-step-num">3</div>
+        <div class="flow-step-body">
+          <h4>Adicionar variáveis no .env</h4>
+          <p>URL do Connector, chave de API e ID do órgão no sistema Datum do cliente.</p>
+          <div class="code-block">DATUM_JAGUARIUNA_URL=https://datum-connector.jaguariuna.sp.gov.br
+DATUM_JAGUARIUNA_KEY=&lt;chave-gerada-na-instalação&gt;
+DATUM_JAGUARIUNA_ORGAO_ID=JAG-001</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-step-line"></div>
+        <div class="flow-step-num">4</div>
+        <div class="flow-step-body">
+          <h4>Instalar o Datum Connector no servidor do cliente</h4>
+          <p>Fornecer o template .NET ao time técnico da prefeitura. Deploy via Docker ou IIS. A equipe da prefeitura configura a connection string do SQL Server e define a API Key.</p>
+          <div class="code-block"># Via Docker (recomendado)
+docker run -p 8080:8080 \
+  -e ConnectionStrings__Datum="Server=...;Database=datum;..." \
+  -e ApiKey="chave-gerada" \
+  -e OrgaosPermitidos="JAG-001" \
+  ciberian/datum-connector:latest</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-step-num">5</div>
+        <div class="flow-step-body">
+          <h4>Reiniciar o container do Gateway</h4>
+          <p>Para o PHP OPcache carregar o novo código (cache de bytecode sem invalidação automática).</p>
+          <div class="code-block">docker restart lgpd-gateway-app
+
+# Verificar que o novo tenant aparece no status
+curl -H "X-Admin-Key: sua-admin-key" \
+  https://lgpd-gateway.ciberian.com.br/api/tenants</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── NON-FUNCTIONALS ────────────────────────────── -->
+<section class="section" style="background: var(--surface);">
+  <div class="page-wrap">
+    <div class="section-label">Requisitos Não Funcionais</div>
+    <h2 class="section-title">Desempenho, segurança e extensibilidade</h2>
+    <div class="nfr-grid">
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#9200;</span>
+        <span class="nfr-value">&lt; 200ms</span>
+        <h4>Latência Gateway (p95)</h4>
+        <p>Excluindo latência do Connector. Com cache ativo: &lt; 20ms.</p>
+      </div>
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#128279;</span>
+        <span class="nfr-value">99,5%</span>
+        <h4>Disponibilidade mensal</h4>
+        <p>Indisponibilidade de Connector não é contabilizada como indisponibilidade do Gateway.</p>
+      </div>
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#128274;</span>
+        <span class="nfr-value">TLS 1.3</span>
+        <h4>Transporte seguro</h4>
+        <p>HTTPS obrigatório em todos os saltos. Requisições HTTP sem TLS são recusadas.</p>
+      </div>
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#128272;</span>
+        <span class="nfr-value">SHA-256</span>
+        <h4>API Keys</h4>
+        <p>Armazenadas como hash SHA-256 — valor completo não recuperável. Keys do Payproxy e admin com escopos separados.</p>
+      </div>
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#127758;</span>
+        <span class="nfr-value">0 dados pessoais</span>
+        <h4>Privacidade por design</h4>
+        <p>Gateway não armazena dados de contribuintes. ROT e RIPD são dados institucionais do DPO, não de titulares.</p>
+      </div>
+
+      <div class="nfr-card">
+        <span class="nfr-card-icon">&#128640;</span>
+        <span class="nfr-value">1 dia</span>
+        <h4>Novo cliente</h4>
+        <p>Onboarding de novo município em menos de 1 dia — Strategy + .env + Connector. Sem deploy de Payproxy.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── FOLDER STRUCTURE ───────────────────────────── -->
+<section class="section">
+  <div class="page-wrap">
+    <div class="section-label">Estrutura de Código</div>
+    <h2 class="section-title">Onde vive cada responsabilidade</h2>
+
+    <div class="component-grid">
+      <div>
+        <h3 style="font-size:14px; font-weight:700; color:var(--accent); font-family:var(--mono); margin-bottom:12px; letter-spacing:0.05em;">LGPD GATEWAY · Laravel</h3>
+        <div style="background:#f0f5fa; border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 3px 3px 0; padding:16px 20px; font-family:var(--mono); font-size:12px; color:#2a4a6a; line-height:1.9; overflow-x:auto; white-space:pre;">app/
+├── Contracts/
+│   └── DatumStrategyInterface.php
+├── Http/Controllers/
+│   ├── RotController.php
+│   ├── RipdController.php
+│   ├── HealthController.php
+│   └── TenantController.php
+├── Middleware/
+│   └── GatewayApiKeyMiddleware.php
+├── Resources/
+│   ├── RotResource.php
+│   └── RipdResource.php
+├── Models/
+│   └── GatewayLog.php
+└── Services/
+    ├── DatumGatewayService.php   ← factory
+    └── Strategies/
+        ├── SalvadorDatumStrategy.php
+        └── AlagoínhasDatumStrategy.php
+config/
+└── datum_clients.php</div>
+      </div>
+
+      <div>
+        <h3 style="font-size:14px; font-weight:700; color:#1e6642; font-family:var(--mono); margin-bottom:12px; letter-spacing:0.05em;">DATUM CONNECTOR · .NET 8</h3>
+        <div style="background:#f0faf4; border:1px solid #b8deca; border-left:3px solid #2a7d4e; border-radius:0 3px 3px 0; padding:16px 20px; font-family:var(--mono); font-size:12px; color:#1a4a30; line-height:1.9; overflow-x:auto; white-space:pre;">src/
+├── Controllers/
+│   ├── RotController.cs
+│   ├── RipdController.cs
+│   └── HealthController.cs
+├── Repositories/
+│   ├── IRotRepository.cs
+│   ├── RotRepositoryV1.cs
+│   └── RotRepositoryV2.cs
+├── Models/
+│   ├── RotItem.cs
+│   └── RipdReport.cs
+└── Middleware/
+    └── ApiKeyMiddleware.cs
+appsettings.json   ← orgao_ids + conn string
+Dockerfile
+README-IIS.md</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="page-wrap">
+    <span>LGPD-Gateway / Arquitetura-LGPD-Gateway.html · Ciberian · 2026</span>
+    <span>Ver também: <a href="Especificacao-Requisitos-LGPD-Gateway.md">Especificação de Requisitos</a> · <a href="README.md">README</a> · <a href="CLAUDE.md">CLAUDE.md</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

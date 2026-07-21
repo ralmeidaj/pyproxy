@@ -1,0 +1,505 @@
+<title>Relatório — Payproxy × Datum: Estratégia de Implementação Seg &amp; LGPD</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff !important;font-family:'Segoe UI',Arial,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a}
+
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.96);backdrop-filter:blur(4px);border-bottom:1px solid #d0dae8;padding:7px 24px;display:flex;align-items:center;gap:8px;font-size:9pt}
+.tb-brand{font-weight:700;color:#1a2a4a;font-size:9.5pt;margin-right:6px}
+.tb-sep{color:#d0dae8;margin:0 6px}
+.tb-lbl{font-size:9pt;color:#555}
+.tb-btn{padding:3px 10px;border:1px solid #ccd6e0;border-radius:4px;background:#fff;cursor:pointer;font-size:8.5pt;color:#1a2a4a;font-family:inherit}
+.tb-btn:hover{background:#f0f4f8}
+.tb-right{margin-left:auto;font-size:8.5pt;color:#888}
+
+.wrap{max-width:960px;margin:0 auto;padding:56px 48px 60px;background:#fff}
+
+.doc-title-block{margin-bottom:20px;margin-top:14px}
+.doc-title-block h1{font-size:20pt;font-weight:700;color:#1a2a4a;border-bottom:3px solid #1a6fb5;padding-bottom:8px;margin-bottom:4px}
+.doc-subtitle{font-size:13pt;color:#555}
+
+.meta-info{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:6px;padding:12px 20px;margin-bottom:28px;display:flex;gap:32px;flex-wrap:wrap}
+.mi{display:flex;flex-direction:column}
+.mi-label{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.mi-val{font-weight:600;color:#1a2a4a;font-size:10pt}
+.badge-open{display:inline-block;background:#fef9c3;color:#854d0e;font-size:8.5pt;padding:1px 8px;border-radius:10px;font-weight:700}
+
+h2.sec{font-size:14pt;font-weight:700;color:#1a2a4a;border-bottom:1.5px solid #d0dae8;padding:14px 0 6px;margin-top:28px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+h2.sec::before{content:'▼';font-size:9pt;color:#1a6fb5}
+h2.sec.closed::before{content:'▶'}
+.sec-body{overflow:hidden;transition:max-height .35s ease,opacity .25s ease}
+.sec-body.closed{max-height:0!important;opacity:0;pointer-events:none}
+
+h3{font-size:12pt;font-weight:700;color:#1a4a6b;margin:18px 0 8px}
+h4{font-size:10.5pt;font-weight:700;color:#1a2a4a;margin:12px 0 6px}
+p{margin:8px 0}
+ul,ol{margin:8px 0 8px 24px;line-height:1.8}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:10pt}
+th{background:#1a2a4a;color:#fff;padding:8px 12px;text-align:left;font-weight:600}
+td{padding:7px 12px;border-bottom:1px solid #ccd6e0;vertical-align:top}
+tr:nth-child(even) td{background:#f5f8fc}
+
+code{font-family:'Consolas','Courier New',monospace;font-size:9.5pt;background:#f0f4f8;border:1px solid #ccd6e0;border-radius:3px;padding:1px 5px;color:#1a3a5a}
+pre{background:#f0f4f8;border:1px solid #ccd6e0;border-radius:5px;padding:14px 16px;overflow-x:auto;margin:12px 0;font-family:'Consolas','Courier New',monospace;font-size:9.5pt;color:#1a3a5a;line-height:1.5}
+
+.card{background:#f7fafd;border-left:4px solid #1a6fb5;border-radius:0 6px 6px 0;padding:12px 16px;margin:10px 0}
+.card.green{background:#f7fdf7;border-color:#2a7a2a}
+.card.amber{background:#fdf7f0;border-color:#c47a00}
+.card.red{background:#fdf2f2;border-color:#c02626}
+.card-title{font-weight:700;color:#1a2a4a;margin-bottom:5px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+@media(max-width:620px){.g2{grid-template-columns:1fr}}
+
+.pill{display:inline-block;font-size:8.5pt;font-weight:700;padding:1px 9px;border-radius:10px;white-space:nowrap}
+.pill-sim{background:#dcfce7;color:#166534}
+.pill-parcial{background:#fef9c3;color:#854d0e}
+.pill-nao{background:#fee2e2;color:#991b1b}
+.pill-seg{background:#eff6ff;color:#1d4ed8}
+.pill-lgpd{background:#f0fdf4;color:#15803d}
+
+.opt-card{border:1px solid #d0dae8;border-radius:8px;margin:16px 0;overflow:hidden}
+.opt-head{padding:10px 16px;font-weight:700;font-size:11pt;color:#fff;display:flex;align-items:center;gap:10px}
+.opt-head.blue{background:#1a6fb5}
+.opt-head.purple{background:#5b21b6}
+.opt-head.green{background:#166534}
+.opt-tag{font-size:8pt;font-weight:700;background:rgba(255,255,255,.22);padding:2px 8px;border-radius:9px;margin-left:auto}
+.opt-body{padding:12px 18px}
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}
+@media(max-width:620px){.pros-cons{grid-template-columns:1fr}}
+.pc-col-title{font-weight:700;font-size:9.5pt;margin-bottom:6px}
+.pc-col-title.pros{color:#166534}
+.pc-col-title.cons{color:#991b1b}
+.pc-list{list-style:none;margin:0;padding:0}
+.pc-list li{padding:4px 0 4px 22px;position:relative;font-size:9.5pt;line-height:1.5}
+.pc-list.pros li::before{content:'✓';position:absolute;left:2px;color:#16a34a;font-weight:700}
+.pc-list.cons li::before{content:'✗';position:absolute;left:2px;color:#dc2626;font-weight:700}
+
+@media print{
+  .toolbar{display:none}
+  .wrap{padding-top:20px}
+  h2.sec::before{display:none}
+  .sec-body.closed{max-height:none!important;opacity:1;pointer-events:auto}
+  h2.sec{font-size:12pt}
+}
+</style>
+
+<div class="toolbar">
+  <span class="tb-brand">Payproxy × Datum</span>
+  <span class="tb-sep">|</span>
+  <span class="tb-lbl">Seções:</span>
+  <button class="tb-btn" onclick="toggleAll(false)">Expandir</button>
+  <button class="tb-btn" onclick="toggleAll(true)">Recolher</button>
+  <span class="tb-right">Relatório de Estratégia — Jul 2026</span>
+</div>
+
+<div class="wrap">
+
+<div class="doc-title-block">
+  <h1>Relatório de Estratégia — Segurança &amp; LGPD</h1>
+  <div class="doc-subtitle">Payproxy × Datum: reuso, integração e plano de implementação</div>
+</div>
+
+<div class="meta-info">
+  <div class="mi"><span class="mi-label">Documento</span><span class="mi-val">REL-001 v1.0</span></div>
+  <div class="mi"><span class="mi-label">Data</span><span class="mi-val">15 Jul 2026</span></div>
+  <div class="mi"><span class="mi-label">Insumos</span><span class="mi-val">ARQ-001 · SEC-001 · código-fonte Datum</span></div>
+  <div class="mi"><span class="mi-label">Decisão</span><span class="mi-val"><span class="badge-open">EM ABERTO — recomendação: Híbrido</span></span></div>
+</div>
+
+<!-- 1 -->
+<h2 class="sec" onclick="toggle(this)">1. Objetivo e Método</h2>
+<div class="sec-body">
+  <p>Este relatório responde a três perguntas:</p>
+  <ol>
+    <li>Dos <strong>15 requisitos de Segurança &amp; LGPD do Payproxy</strong> (doc. SEC-001), o que o <strong>Datum</strong> — sistema de governança LGPD já estabelecido — <strong>já contempla</strong>?</li>
+    <li>É melhor <strong>reimplementar</strong> esses itens no Payproxy usando o Datum como base, ou <strong>criar uma camada de serviços no Datum</strong> para o Payproxy consumir?</li>
+    <li>Qual o <strong>plano recomendado</strong> e as decisões tomadas?</li>
+  </ol>
+  <p><strong>Método:</strong> leitura integral dos documentos ARQ-001 (Arquitetura Payproxy) e SEC-001 (Segurança &amp; LGPD Payproxy) + varredura do código-fonte do Datum (<code>C:\Sandro Workspace\Projetos\Datum\lgpd</code>): Controllers, Business, Models, Services, Filters, Web.config e projetos Nucleo/Robo. Todas as afirmações sobre o Datum estão referenciadas a arquivos concretos.</p>
+</div>
+
+<!-- 2 -->
+<h2 class="sec" onclick="toggle(this)">2. Os Dois Projetos em Resumo</h2>
+<div class="sec-body">
+  <table>
+    <thead><tr><th></th><th>Payproxy</th><th>Datum</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Propósito</strong></td><td>SaaS multi-tenant de emissão de boletos com split, DDA e AR Digital (prova jurídica de entrega). Cliente: SEFAZ Salvador, ~341 mil boletos/mês</td><td>Sistema de governança e políticas LGPD: inventário de tratamento (ROPA), RIPD, gestão de solicitações de titulares, incidentes, riscos, frameworks CIS/NIST, treinamentos</td></tr>
+      <tr><td><strong>Stack</strong></td><td>PHP 8.3 / Laravel 11, PostgreSQL 16, Redis 7, Vue 3 + Inertia, MinIO, Docker</td><td>C# / .NET Framework 4.6.1, ASP.NET MVC 5.2.7 + Web API 5.2.7, EF 6.2, SQL Server (com suporte alternável a Oracle), Razor</td></tr>
+      <tr><td><strong>Solução/Projetos</strong></td><td>Monólito Laravel (API + Backoffice Inertia)</td><td><code>LGDP.sln</code>: <strong>LGPD</strong> (web app principal), <strong>Nucleo</strong> (framework compartilhado: AbstractController, sessão, perfis, log, e-mail), <strong>Robo</strong> (console agendado — hoje só envia e-mails de tarefas atrasadas)</td></tr>
+      <tr><td><strong>Autenticação</strong></td><td>API Key por tenant (API pública) + sessão Laravel com TOTP obrigatório (backoffice)</td><td>Forms Authentication, cookie SSO <code>SingleSignOn</code>, senha SHA-256 ou Active Directory, 2FA TOTP opcional (Otp.NET + QRCoder)</td></tr>
+      <tr><td><strong>Multi-tenancy</strong></td><td>Tenant por API Key + middleware <code>TenantScope</code></td><td>Interface <code>IOrgao</code> + filtro por <code>SessionHelper.Usuario.Orgao.Id</code>; entidade-tenant é <code>ConfigOrgao</code> (inclui dados do DPO/encarregado)</td></tr>
+      <tr><td><strong>API externa</strong></td><td>API REST pública documentada (Swagger), webhooks com HMAC</td><td><strong>Não há API externa.</strong> <code>Controllers\api</code> é interna (usuários/áreas/órgãos), autenticada pelo cookie de sessão, consumida pelo próprio filtro de acesso</td></tr>
+      <tr><td><strong>Perfis</strong></td><td>Roles do backoffice por tenant</td><td>Grupos: Administrador, DPO, Apoio à Liderança, Comum + menu dinâmico (<code>menu.json</code> + <code>AcessoBO</code>)</td></tr>
+    </tbody>
+  </table>
+  <div class="card amber">
+    <div class="card-title">⚠ Fato decisivo para o debate</div>
+    Os stacks são <strong>incompatíveis em nível de código</strong> (C#/.NET Framework × PHP/Laravel). "Copiar e colar código com ajustes" é impossível na prática — o que o Datum oferece de reutilizável é o <strong>desenho de domínio</strong> (entidades, campos, workflows, regras de prazo, estrutura de relatórios), que tem alto valor, e as <strong>funcionalidades prontas em produção</strong>, que só são aproveitáveis usando o próprio Datum.
+  </div>
+</div>
+
+<!-- 3 -->
+<h2 class="sec" onclick="toggle(this)">3. Levantamento — Matriz de Cobertura (15 requisitos × Datum)</h2>
+<div class="sec-body">
+  <p>Resultado geral: <strong>2 requisitos cobertos de forma forte, 3 parcialmente, 10 não cobertos</strong>. Nenhum dos 8 itens de Segurança é coberto (o próprio Datum carrega débitos nesses pontos — ver Apêndice A).</p>
+  <table>
+    <thead><tr><th>#</th><th>Requisito Payproxy (SEC-001)</th><th>Tipo</th><th>Datum</th><th>Evidência principal no código do Datum</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Portal do Titular (Art. 18)</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-parcial">PARCIAL</span></td><td><code>SolicitacaoController</code>, <code>Solicitacao.cs</code>, <code>SolicitacaoBO.cs</code> — gestão interna completa de solicitações; sem portal público, sem export/anonimização automatizada</td></tr>
+      <tr><td>2</td><td>Retenção e Expurgo Automático</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Retenção só documental (<code>InventarioItem.DescricaoRetencao</code>, <code>FonteRetencao</code>); nenhum job de expurgo</td></tr>
+      <tr><td>3</td><td>Consentimento Rastreável (WhatsApp)</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Nenhuma entidade de consentimento; <code>HipoteseTratamento</code> é base legal de tratamento (ROPA), não opt-in de titular</td></tr>
+      <tr><td>4</td><td>Data Masking nas Interfaces</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-nao">NÃO</span></td><td>CPF/e-mail/telefone em claro nas telas e no log automático</td></tr>
+      <tr><td>5</td><td>Notificação de Incidente (Art. 48)</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-parcial">PARCIAL</span></td><td><code>Incidente.cs</code>, <code>IncidenteController/BO</code> — registro rico + workflow; <strong>sem timer 72h ANPD, sem comunicado, sem notificação a titulares</strong></td></tr>
+      <tr><td>6</td><td>Registro de Operações (Art. 37 / ROPA)</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-sim">SIM — forte</span></td><td><code>Inventario.cs</code> / <code>InventarioItem.cs</code> + ~10 entidades de apoio; importação por Excel/IA (<code>ImportacaoRot*</code>)</td></tr>
+      <tr><td>7</td><td>RIPD Automatizado</td><td><span class="pill pill-lgpd">LGPD</span></td><td><span class="pill pill-sim">SIM — forte</span></td><td><code>RelatorioRIPD.cs</code> + BO/Controller — PDF via NReco, pré-populado do inventário, revisões e assinaturas</td></tr>
+      <tr><td>8</td><td>Security Headers HTTP</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td><code>Web.config</code> sem customHeaders/HSTS/CSP</td></tr>
+      <tr><td>9</td><td>Audit Log Centralizado</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-parcial">PARCIAL</span></td><td><code>LGPDContext.OnBeforeSaving()</code> + <code>Nucleo\Models\Log.cs</code> — log automático, mas sem old/new, sem user-agent, não append-only</td></tr>
+      <tr><td>10</td><td>Rate Limiting por Tenant</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Nenhum filtro/middleware de throttling</td></tr>
+      <tr><td>11</td><td>IP Allowlist por Tenant</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>IP só é coletado para log (<code>Utils.GetIPAddress</code>)</td></tr>
+      <tr><td>12</td><td>Rotação de API Keys</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Sistema não usa API keys; tokens externos fixos no <code>Web.config</code></td></tr>
+      <tr><td>13</td><td>Secrets Management</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Segredos em texto no <code>Web.config</code>; chave AES fixa no código (<code>CryptoHelper</code>)</td></tr>
+      <tr><td>14</td><td>mTLS nos Webhooks</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Sem configuração de certificado de cliente</td></tr>
+      <tr><td>15</td><td>Detecção de Anomalias</td><td><span class="pill pill-seg">SEG</span></td><td><span class="pill pill-nao">NÃO</span></td><td>Só telemetria genérica (Application Insights)</td></tr>
+    </tbody>
+  </table>
+  <div class="card">
+    <div class="card-title">Bônus encontrado (não pedido, mas relevante)</div>
+    O Datum tem <strong>2FA TOTP</strong> (<code>TwoFactorController</code> + <code>TwoFactorService</code>, Otp.NET) — o Payproxy já cobre isso com <code>google2fa-laravel</code>. Também há política de senha forte (<code>SegurancaBO.ValidaSenhaForte</code>) e antiforgery tokens.
+  </div>
+</div>
+
+<!-- 4 -->
+<h2 class="sec" onclick="toggle(this)">4. Detalhamento por Requisito — o que o Datum tem de fato</h2>
+<div class="sec-body">
+
+  <h3>4.1 Portal do Titular (Art. 18) — PARCIAL</h3>
+  <p>O Datum possui <strong>gestão de casos DSAR completa, porém operada internamente</strong> por usuários logados. A entidade <code>Solicitacao</code> registra: nome/e-mail/CPF/telefone do titular, meio de comprovação de identidade, categoria da solicitação (o tipo de direito exercido é tabela de domínio), categoria de titular, canal de recebimento, meio/forma de resposta. Traz numeração <code>NNNN.AAAA</code>, ciclo de status <code>Aberto → EmAndamento → DisponivelApreciacao → Concluido/Cancelado</code>, prazo calculado (<code>DataLimite = DataRecebimento + PrazoResposta</code>), histórico (<code>HistoricoSolicitacao</code>), anexos em disco, e-mail automático ao grupo DPO e pesquisa de satisfação anônima pós-conclusão (protegida por GUID).</p>
+  <p><strong>Lacunas:</strong> não há portal público self-service — a feature planejada existe apenas como configuração (<code>SolicitacaoForm</code>: nome + domínio por órgão) e um stub (<code>FormularioModalController.GetHtmlContent</code> retorna literalmente <code>&lt;h1&gt;hello world&lt;/h1&gt;</code>). Não há exportação de dados do titular (portabilidade), nem exclusão/anonimização automatizada, nem confirmação automatizada de existência de dados. Os direitos são workflow manual.</p>
+
+  <h3>4.2 Retenção e Expurgo — NÃO</h3>
+  <p>Retenção no Datum é <strong>documental</strong>: campos de texto livre no inventário (<code>DescricaoRetencao</code>, <code>DescricaoEliminacao</code>) e no RIPD (<code>TempoRetencao</code>, <code>FonteRetencao</code>), além do cadastro <code>FonteRetencao</code> (nome + órgão). Não existe motor de política por tipo de dado nem job de expurgo/anonimização — o único processo agendado (projeto <strong>Robo</strong>) apenas envia e-mails de tarefas atrasadas (<code>NotificacaoBO.NotificarAtividadeAtrasada</code>). A "exclusão" do sistema é soft-delete manual (<code>Ativo=false</code>).</p>
+
+  <h3>4.3 Consentimento Rastreável — NÃO</h3>
+  <p>Busca por <code>consent/consentimento/opt-in/revoga</code> em todo o código: nenhum resultado. O que existe é base legal em nível de <em>tratamento</em> (<code>HipoteseTratamento</code> ligada ao inventário/RIPD) — documentação de ROPA, não rastreamento de consentimento por titular com versão de texto, opt-in/opt-out e revogação.</p>
+
+  <h3>4.4 Data Masking — NÃO</h3>
+  <p>Busca por <code>mascar/mask/anonimiz</code> em <code>*.cs</code>: nenhum resultado. Dados pessoais são exibidos em claro (ex.: <code>ViewBag.DadosTitular</code> no <code>SolicitacaoController</code>), e o log automático grava o JSON completo da entidade — incluindo dados pessoais.</p>
+
+  <h3>4.5 Notificação de Incidente (Art. 48) — PARCIAL</h3>
+  <p>Registro de incidente <strong>rico e bem alinhado ao formulário da ANPD</strong>: <code>DataAcontecimento</code>, <code>DataDeteccao</code>, <code>EnvolveDadosPessoais</code>, <code>DadosPessoaisAfetados</code>, categoria de titular, <code>NivelRisco</code>, consequências, medidas de prevenção/resposta/aprimoramento, partes interessadas notificadas, procedência da notificação, órgão notificante. Mesmo ciclo de status e histórico da Solicitação, com tarefas e pesquisa de satisfação.</p>
+  <p><strong>Lacunas críticas:</strong> busca por <code>ANPD/72/PrazoAnpd</code>: nenhum resultado. Não há contagem regressiva de 72h, alerta de prazo, geração de comunicado à ANPD nem notificação em massa a titulares afetados. É gestão de incidentes, não workflow orientado ao prazo legal.</p>
+
+  <h3>4.6 Registro de Operações — Art. 37 / ROPA — SIM (forte)</h3>
+  <p>O núcleo do Datum. <code>InventarioItem</code> cobre praticamente todos os elementos do Art. 37: <strong>finalidade</strong> (<code>DescricaoFinalidadeTratamento</code>), <strong>base legal</strong> (<code>PrevisaoLegal</code> + <code>HipoteseTratamento</code>), <strong>dados tratados</strong> (categorias comuns/sensíveis), <strong>compartilhamento</strong> (<code>DescricaoCompartilhamento</code> + <code>AgenteTratamentoInventarioItem</code>), <strong>transferência internacional</strong> (<code>TransferenciaDadosInventarioItem</code>), <strong>retenção/eliminação</strong>, <strong>medidas de segurança</strong> (<code>MedidaSegurancaInventarioItem</code>), abrangência geográfica, fonte, frequência e volumetria. Inventários versionados por Área + Encarregado (<code>Inventario.Versao</code>), diretório de agentes de tratamento (<code>AgenteTratamento</code>), DPO/encarregado no <code>ConfigOrgao</code> e <strong>importação assistida de ROT via Excel/IA</strong> (<code>ImportacaoRot*</code>, <code>Services\Ia</code>).</p>
+
+  <h3>4.7 RIPD — SIM (forte)</h3>
+  <p><code>RelatorioRIPD</code> gera <strong>PDF</strong> (NReco.PdfGenerator a partir de template Razor/HTML) com estrutura de DPIA: objetivo, necessidade/proporcionalidade, natureza/contexto/finalidade, riscos identificados (probabilidade × impacto = <code>NivelCalculado</code>), medidas de tratamento e segurança, agentes de tratamento, categorias de dados com tempo/fonte de retenção. Fluxo <code>NaoIniciado/Rascunho/Finalizado/Assinado</code>, <strong>revisões versionadas</strong> (<code>RevisaoRelatorioRIPD</code>) e <strong>assinantes</strong> com data de assinatura. É <em>semi-automático</em>: pré-populado a partir dos itens de inventário marcados como alto risco; o conteúdo analítico é redigido pelo usuário — exatamente o modelo que o SEC-001 descreve ("o DPO preenche apenas a avaliação subjetiva").</p>
+
+  <h3>4.8–4.15 Itens de Segurança — NÃO (Audit Log PARCIAL)</h3>
+  <p>O único item com base aproveitável é o <strong>Audit Log</strong>: em cada <code>SaveChanges</code>, o <code>LGPDContext.OnBeforeSaving()</code> cria um registro <code>Log</code> (tipo, id da entidade, usuário da sessão, IP com suporte a <code>X-Forwarded-For</code>, ação Inserir/Alterar/Excluir/Acesso, e <code>Value</code> = JSON da entidade). Login é registrado como Acesso; há tela de consulta com filtros e export CSV (<code>LogController</code>, admin-only).</p>
+  <p><strong>Lacunas vs. requisito do Payproxy:</strong> guarda apenas o estado <em>novo</em> (sem diff old/new); não grava user-agent; a tabela não é append-only (editável no banco, sem hash/WORM); e entidades que não herdam <code>AbstractModel</code> — justamente <code>Solicitacao</code> e <code>Incidente</code> — ficam fora do log automático (usam históricos manuais próprios). Os demais itens (headers, rate limiting, IP allowlist, API keys, secrets, mTLS, anomalias) não existem no Datum.</p>
+</div>
+
+<!-- 5 -->
+<h2 class="sec" onclick="toggle(this)">5. O Debate — Três Estratégias, Prós e Contras</h2>
+<div class="sec-body">
+
+  <p>Premissa que organiza tudo: os 15 requisitos se dividem em <strong>dois planos de natureza diferente</strong>.</p>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Plano de dados/runtime — 11 itens</div>
+      Os 8 de Segurança + Retenção/Expurgo + Consentimento + Data Masking + a parte executiva do Portal do Titular. Operam sobre os <strong>dados e o runtime do Payproxy</strong> (mascarar telas Vue, expurgar linhas do PostgreSQL, limitar requisições no Redis). <strong>Nenhum serviço remoto pode fornecê-los</strong> — têm que ser nativos, em qualquer cenário.
+    </div>
+    <div class="card green">
+      <div class="card-title">Plano de governança — 4 itens</div>
+      ROPA (Art. 37), RIPD, gestão de casos de titular (Art. 18) e de incidentes (Art. 48). São processos documentais/de workflow operados por DPO e equipe — <strong>a especialidade do Datum</strong>, que tem 2 deles prontos e 2 pela metade.
+    </div>
+  </div>
+
+  <!-- OPÇÃO A -->
+  <div class="opt-card">
+    <div class="opt-head blue">Opção A — Tudo no Payproxy <span class="opt-tag">Datum como referência de modelagem</span></div>
+    <div class="opt-body">
+      <p>Reimplementar os 15 itens em Laravel. O Datum não é tocado — serve de blueprint de entidades e workflows (<code>Solicitacao</code>, <code>Incidente</code>, <code>InventarioItem</code>, <code>RelatorioRIPD</code>).</p>
+      <div class="pros-cons">
+        <div>
+          <div class="pc-col-title pros">Pontos positivos</div>
+          <ul class="pc-list pros">
+            <li><strong>Autonomia total</strong> — zero dependência externa, nenhum ponto de falha novo no SLA de 341k boletos/mês</li>
+            <li><strong>Stack único</strong> — ecossistema Laravel resolve ~6 itens quase de graça (laravel-auditing/activitylog, rate limiter nativo + Redis, policies para masking)</li>
+            <li>11 dos 15 itens teriam que ser nativos de qualquer forma — sem decisão pendente, só executar</li>
+            <li>Deploy, testes e ciclo de release em um sistema só</li>
+            <li>O domínio do Datum economiza semanas de levantamento funcional/jurídico</li>
+          </ul>
+        </div>
+        <div>
+          <div class="pc-col-title cons">Pontos negativos</div>
+          <ul class="pc-list cons">
+            <li><strong>Reimplementa ROPA + RIPD (~4 semanas, os 2 itens mais caros do SEC-001)</strong> — justamente o que o Datum entrega pronto com PDF, versionamento e assinaturas</li>
+            <li><strong>Governança LGPD duplicada</strong> em dois produtos da casa — risco de divergência documental perante a ANPD</li>
+            <li>DPO/equipe de governança passa a operar dois sistemas</li>
+            <li>Nenhum retorno para o Datum como produto</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B -->
+  <div class="opt-card">
+    <div class="opt-head purple">Opção B — Camada de Serviços no Datum <span class="opt-tag">Payproxy consome em runtime</span></div>
+    <div class="opt-body">
+      <p>Construir no Datum uma API externa (tokens, tenancy sem sessão, versionamento, hardening) e o Payproxy consumir DSAR, incidentes, ROPA e RIPD remotamente.</p>
+      <div class="pros-cons">
+        <div>
+          <div class="pc-col-title pros">Pontos positivos</div>
+          <ul class="pc-list pros">
+            <li><strong>Fonte única de verdade</strong> para governança LGPD; DPO trabalha num só sistema</li>
+            <li>Reaproveita as implementações fortes prontas (ROPA, RIPD com PDF, workflows maduros)</li>
+            <li><strong>Evolui o Datum como produto</strong> — a API é ativo comercial reutilizável para outros clientes; Payproxy seria o piloto</li>
+            <li>Mesmo cliente final (SEFAZ) nos dois sistemas — coerência institucional</li>
+          </ul>
+        </div>
+        <div>
+          <div class="pc-col-title cons">Pontos negativos</div>
+          <ul class="pc-list cons">
+            <li><strong>Só cobre ~4 dos 15 itens, e parcialmente</strong> (sem timer 72h, sem portal público) — os outros 11 continuam no Payproxy. Não substitui trabalho; <em>adiciona</em> um projeto grande no Datum</li>
+            <li><strong>Custo escondido é infraestrutura, não funcionalidade</strong>: o Datum não tem API externa — auth é cookie de sessão e o negócio inteiro depende de <code>SessionHelper</code>. Semanas de infra em .NET Framework 4.6.1 antes do primeiro endpoint útil</li>
+            <li><strong>Pré-requisito caro</strong>: sanar o débito de segurança do próprio Datum antes de expor API (segredos em Web.config, chave AES fixa, SHA-256 sem salt, sem headers)</li>
+            <li><strong>Acoplamento de runtime</strong>: disponibilidade do Datum passa a afetar o Payproxy</li>
+            <li><strong>Ironia LGPD</strong>: enviar dados de contribuintes ao Datum cria novo fluxo de compartilhamento de dados pessoais a inventariar, proteger e justificar</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPÇÃO C -->
+  <div class="opt-card">
+    <div class="opt-head green">Opção C — Híbrido <span class="opt-tag">RECOMENDADA</span></div>
+    <div class="opt-body">
+      <p><strong>Fase 1 (sem escrever código no Datum):</strong> Payproxy implementa nativamente os 11 itens de runtime; o ROPA e o RIPD <em>do Payproxy</em> são cadastrados e mantidos <strong>no Datum</strong> (Payproxy como órgão/tenant), aproveitando inclusive a importação por Excel/IA. <strong>Fase 2 (opcional, incremental):</strong> API mínima de ingestão no Datum (2–3 endpoints: criar incidente, criar solicitação de titular), chamada de forma <strong>assíncrona via fila do Payproxy com retry</strong> — Datum indisponível não afeta emissão de boletos, apenas atrasa o espelhamento do caso.</p>
+      <div class="pros-cons">
+        <div>
+          <div class="pc-col-title pros">Pontos positivos</div>
+          <ul class="pc-list pros">
+            <li><strong>Cada plano no lugar certo</strong>: runtime/dados no Payproxy; governança documental no Datum</li>
+            <li><strong>Elimina do backlog do Payproxy os 2 itens mais caros</strong> (ROPA + RIPD, ~4 semanas) ao custo de cadastro, não de desenvolvimento</li>
+            <li>Fase 1 entrega valor imediato sem nenhuma linha de código no Datum</li>
+            <li>Fase 2 é pequena, unidirecional e fora do caminho crítico (fila + retry)</li>
+            <li>Lacunas do Datum (timer 72h, portal público) viram roadmap de produto dirigido por demanda de cliente real</li>
+            <li>Governança num só lugar — DPO continua operando apenas o Datum</li>
+          </ul>
+        </div>
+        <div>
+          <div class="pc-col-title cons">Pontos negativos</div>
+          <ul class="pc-list cons">
+            <li><strong>Jornada de caso dividida</strong>: solicitação nasce no portal do Payproxy e é gerida no Datum — exige dono claro do processo e disciplina operacional</li>
+            <li>Até a fase 2 existir, o espelhamento Payproxy → Datum é <strong>manual</strong> (risco de esquecimento/atraso)</li>
+            <li>A integração da fase 2, mesmo mínima, cria manutenção coordenada entre dois stacks/equipes</li>
+            <li>Interpretação a validar: o SEC-001 pede Registro de Operações "no sistema, e não em planilha" — o híbrido atende com "no Datum" (leitura recomendada: satisfaz, pois o Datum é um sistema de governança; confirmar com o autor do requisito)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>5.4 Reavaliação técnica — linguagem, framework e dificuldade de implementação</h3>
+
+  <h4>a) Os dois stacks lado a lado, sob a ótica de produtividade</h4>
+  <table>
+    <thead><tr><th>Dimensão técnica</th><th>Payproxy (Laravel 11 / PHP 8.3)</th><th>Datum (.NET Framework 4.6.1 / MVC 5)</th></tr></thead>
+    <tbody>
+      <tr><td>Idade/vitalidade do framework</td><td>Moderno, em desenvolvimento ativo, releases anuais</td><td>Framework de 2015, <strong>em modo manutenção</strong>: MVC 5 / Web API 2 não recebem novos recursos e não têm caminho de upgrade para .NET 8 sem reescrita (dependem de <code>System.Web</code>)</td></tr>
+      <tr><td>Infra já disponível para os 15 itens</td><td>Redis (rate limit), Horizon (jobs/retry), DomPDF (PDF), MinIO (storage), middleware pipeline, scheduler — <strong>todas as primitivas já estão no stack</strong></td><td>Sem pipeline de middleware moderno (HTTP modules/filters), sem fila, job único via console app (Robo), PDF via NReco</td></tr>
+      <tr><td>Prontidão para expor API externa</td><td>Já expõe API pública com API Key, Swagger, webhooks HMAC</td><td>Web API 2 interna autenticada por <strong>cookie de sessão</strong>; sem tokens, sem Swagger, sem versionamento — infra de API teria que ser construída à mão (DelegatingHandler/filters)</td></tr>
+      <tr><td>Acoplamento interno</td><td>Services recebem DTOs (sem dependência de Request)</td><td>Camada de negócio inteira depende de <code>SessionHelper.Usuario.Orgao</code> (sessão web) — chamadas sem sessão exigem refatorar BOs</td></tr>
+      <tr><td>Cobertura de testes</td><td>Estrutura Laravel de testes disponível</td><td><strong>Nenhum projeto de teste na solução</strong> (<code>LGDP.sln</code>: LGPD, Nucleo, Robo) — refatorações são cegas</td></tr>
+      <tr><td>Deploy/operação</td><td>Docker Compose, Linux, containers isolados</td><td>IIS/Windows Server — operação e hardening em outro paradigma; acoplar os dois duplica a superfície operacional</td></tr>
+      <tr><td>Front-end</td><td>Vue 3 + Inertia + Tailwind</td><td>Razor + jQuery — telas não reaproveitáveis/embutíveis na UX do Payproxy</td></tr>
+      <tr><td>Persistência</td><td>PostgreSQL 16 único</td><td>EF6 com provider duplo SQL Server/Oracle (conversão snake_case em runtime) — fragilidade extra em qualquer mudança de modelo</td></tr>
+      <tr><td>Perfil de carga</td><td>Alto volume (341k boletos/mês), SLA contratual</td><td>Ferramenta interna de governança, baixa concorrência — nunca foi dimensionado para tráfego de máquina</td></tr>
+    </tbody>
+  </table>
+
+  <h4>b) Sinergia interna do Payproxy que barateia a Opção A e a fase 1 do Híbrido</h4>
+  <div class="card green">
+    <div class="card-title">O AR Digital já implementou os padrões que o Portal do Titular precisa</div>
+    Landing pública com token de uso único (<code>/ar/boleto/{token}</code>), confirmação por CPF em hash SHA-256, geração de PDF de evidências (DomPDF + MinIO) e jobs assíncronos. O Portal do Titular (Art. 18) é, tecnicamente, uma <em>variação desses mesmos padrões</em> — verificação por e-mail com token, exibição de dados, export PDF/JSON. O custo real no Payproxy é menor do que o SEC-001 estimou de forma conservadora.
+  </div>
+
+  <h4>c) Estimativas de esforço por item (implementação nativa no Payproxy)</h4>
+  <table>
+    <thead><tr><th>Item</th><th>Mecanismo em Laravel</th><th>Esforço</th><th>Dificuldade técnica</th></tr></thead>
+    <tbody>
+      <tr><td>Security Headers</td><td>Middleware global (ou <code>spatie/laravel-csp</code>)</td><td>1 dia</td><td>Trivial</td></tr>
+      <tr><td>Audit Log</td><td><code>owen-it/laravel-auditing</code> (old/new nativos) + permissões append-only no PostgreSQL</td><td>1 sem</td><td>Baixa</td></tr>
+      <tr><td>Rate Limiting</td><td><code>RateLimiter</code> nativo + Redis (já no stack)</td><td>2 dias</td><td>Trivial</td></tr>
+      <tr><td>IP Allowlist</td><td>Middleware + campo JSON em <code>tenants</code></td><td>2 dias</td><td>Trivial</td></tr>
+      <tr><td>Rotação API Keys</td><td>Scheduler + 2 jobs + campos em <code>api_keys</code></td><td>3 dias</td><td>Baixa</td></tr>
+      <tr><td>Consentimento WhatsApp</td><td>Tabela + 2 endpoints + gate no <code>NotificationService</code></td><td>2 dias</td><td>Baixa</td></tr>
+      <tr><td>Portal do Titular</td><td><strong>Reuso dos padrões AR Digital</strong> (token, landing, hash CPF, PDF)</td><td>1 sem</td><td>Baixa-média</td></tr>
+      <tr><td>Retenção e Expurgo</td><td><code>DataRetentionService</code> + scheduler + config</td><td>1 sem</td><td>Média (regras CTN)</td></tr>
+      <tr><td>Data Masking</td><td>API Resources por role + diretiva Vue</td><td>1 sem</td><td>Média (consistência UI/API)</td></tr>
+      <tr><td>Notif. Incidente (Art. 48)</td><td>Model + workflow + timer 72h + templates</td><td>1 sem</td><td>Média</td></tr>
+      <tr><td>mTLS</td><td>Config Nginx (<code>ssl_verify_client</code>)</td><td>3 dias</td><td>Baixa (app não muda)</td></tr>
+      <tr><td>Secrets Management</td><td>Vault/AWS SM + provider no boot</td><td>2 sem</td><td>Média-alta (infra)</td></tr>
+      <tr><td>Detecção de Anomalias</td><td>Jobs de baseline + alertas</td><td>3 sem</td><td>Alta (em qualquer stack)</td></tr>
+      <tr><td><strong>ROPA (Art. 37)</strong></td><td>CRUD volumoso (~10 entidades) + telas</td><td><strong>2 sem</strong></td><td>Baixa tecnicamente, <strong>alta em volume</strong></td></tr>
+      <tr><td><strong>RIPD</strong></td><td>CRUD + DomPDF (já usado nos laudos)</td><td><strong>2 sem</strong></td><td>Baixa tecnicamente, <strong>alta em volume</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h4>d) O custo técnico real da Opção B (camada de serviços no Datum)</h4>
+  <table>
+    <thead><tr><th>Trabalho necessário no Datum</th><th>Por quê</th><th>Esforço</th><th>Risco</th></tr></thead>
+    <tbody>
+      <tr><td>Autenticação por token para API externa</td><td>Web API 2 só tem cookie de sessão; JWT/token em .NET Framework exige wiring manual (handlers/filters)</td><td>2–3 sem</td><td>Médio</td></tr>
+      <tr><td>Refatorar BOs para contexto explícito</td><td><code>SessionHelper.Usuario.Orgao</code> permeia a camada de negócio; API não tem sessão</td><td>2–4 sem</td><td><strong>Alto — sem testes automatizados para proteger a refatoração</strong></td></tr>
+      <tr><td>Hardening pré-exposição</td><td>Segredos em <code>Web.config</code>, chave AES fixa, SHA-256 sem salt, sem headers (Apêndice A)</td><td>2 sem</td><td>Médio</td></tr>
+      <tr><td>Endpoints + versionamento + docs</td><td>Sem Swagger/versionamento hoje</td><td>1–2 sem</td><td>Baixo</td></tr>
+      <tr><td>Cliente + resiliência no Payproxy</td><td>Retry, circuit breaker, fallback</td><td>1 sem</td><td>Baixo</td></tr>
+      <tr><td colspan="2"><strong>Total Datum + integração</strong></td><td><strong>~8–12 sem</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+  <div class="card red">
+    <div class="card-title">✗ Conclusão técnica da Opção B</div>
+    Investem-se <strong>8–12 semanas</strong> (majoritariamente em infraestrutura invisível, num framework em fim de vida e sem rede de testes) para economizar as <strong>~4 semanas</strong> de ROPA+RIPD no Payproxy — que em Laravel são CRUD + PDF com ferramentas já usadas no projeto. <strong>O ROI técnico é claramente negativo.</strong> Qualquer investimento em Web API 2 é investimento num beco tecnológico: uma futura modernização do Datum (ASP.NET Core) reescreveria essa camada.
+  </div>
+
+  <h4>e) Veredito técnico por opção</h4>
+  <table>
+    <thead><tr><th></th><th>A — Tudo no Payproxy</th><th>B — Serviços no Datum</th><th>C — Híbrido</th></tr></thead>
+    <tbody>
+      <tr><td>Dificuldade técnica</td><td><strong>Baixa-média</strong> — stack moderno, primitivas prontas, padrões AR Digital reutilizáveis. O custo é volume de CRUD, não complexidade</td><td><strong>Alta</strong> — infra de API à mão em framework legado, refatoração cega da camada de negócio, hardening pré-requisito</td><td><strong>Baixa (fase 1: zero código cross-stack)</strong>; média-contida na fase 2 (2–3 endpoints com token + OrgaoId explícito — refatoração cirúrgica de 2 fluxos, não da camada inteira)</td></tr>
+      <tr><td>Esforço total estimado</td><td>~13–14 sem (15 itens)</td><td>~9–10 sem no Payproxy <strong>+ 8–12 sem no Datum</strong></td><td>~9–10 sem no Payproxy (fase 1); +2–3 sem se/quando houver fase 2</td></tr>
+      <tr><td>Risco de execução</td><td>Baixo</td><td>Alto (refatoração sem testes, framework EOL)</td><td>Baixo na fase 1; médio e opcional na fase 2</td></tr>
+      <tr><td>Skills exigidos</td><td>Só PHP/Laravel/Vue</td><td>PHP + C#/.NET legado simultâneos, coordenados</td><td>Fase 1: só PHP; fase 2: C# em escopo pequeno</td></tr>
+    </tbody>
+  </table>
+  <div class="card">
+    <div class="card-title">O que a lente técnica muda no debate</div>
+    <ul>
+      <li><strong>Enfraquece ainda mais a Opção B</strong>: o gargalo não é funcionalidade, é infraestrutura em framework de 2015 sem testes — ROI negativo mensurável (8–12 sem para economizar ~4).</li>
+      <li><strong>Aproxima A de C</strong>: com a produtividade do Laravel e a sinergia do AR Digital, reimplementar ROPA+RIPD é tecnicamente simples (embora volumoso). A diferença entre A e C cai de "semanas de engenharia" para <strong>~4 semanas de CRUD + a questão organizacional</strong>: onde o DPO opera e onde vive a verdade documental.</li>
+      <li><strong>O desempate entre A e C não é técnico, é operacional</strong>: se a equipe de governança já vive no Datum e o mesmo DPO atenderá os dois produtos, C vence; se o Payproxy precisar ser 100% autossuficiente (ex.: exigência contratual da SEFAZ de sistema único), A vence sem demérito.</li>
+    </ul>
+  </div>
+
+  <h3>Comparativo-síntese</h3>
+  <table>
+    <thead><tr><th>Critério</th><th>A — Tudo no Payproxy</th><th>B — Serviços no Datum</th><th>C — Híbrido</th></tr></thead>
+    <tbody>
+      <tr><td>Cobertura dos 15 itens</td><td>15 (tudo reimplementado)</td><td>~4 via serviço + 11 nativos mesmo assim</td><td>11 nativos + 4 via Datum</td></tr>
+      <tr><td>Esforço no Payproxy</td><td>Máximo (inclui ROPA+RIPD)</td><td>Alto (11 itens + cliente da API)</td><td>Alto, porém sem ROPA+RIPD (~-4 semanas)</td></tr>
+      <tr><td>Esforço no Datum</td><td>Zero</td><td>Muito alto (~8–12 sem: infra de API + refatoração + hardening)</td><td>Zero na fase 1; 2–3 sem na fase 2</td></tr>
+      <tr><td>Dificuldade técnica</td><td>Baixa-média</td><td>Alta (framework legado, sem testes)</td><td>Baixa (fase 1) / média-contida (fase 2)</td></tr>
+      <tr><td>Risco operacional (SLA)</td><td>Nenhum novo</td><td>Alto (acoplamento síncrono)</td><td>Baixo (assíncrono, fora do caminho crítico)</td></tr>
+      <tr><td>Governança unificada</td><td>Não (duplicada)</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Retorno para o Datum</td><td>Nenhum</td><td>Alto, mas caro e arriscado</td><td>Médio, incremental e dirigido</td></tr>
+      <tr><td>Time-to-compliance</td><td>Médio</td><td>Lento (espera infra do Datum)</td><td><strong>Rápido</strong> (fases independentes)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 6 -->
+<h2 class="sec" onclick="toggle(this)">6. Recomendação Técnica e Resumo das Decisões</h2>
+<div class="sec-body">
+  <div class="card green">
+    <div class="card-title">Recomendação: Opção C — Híbrido</div>
+    <ol>
+      <li>A divisão é imposta pela natureza dos requisitos, não por preferência: 11 itens são inseparáveis do runtime do Payproxy, e nenhuma arquitetura muda isso.</li>
+      <li>Para os 4 itens de governança, o Datum tem 2 prontos e 2 pela metade — reimplementá-los (A) descarta o principal ativo da casa; transformá-los em API síncrona (B) custa mais em infraestrutura do que em funcionalidade.</li>
+      <li>O híbrido captura o valor do Datum <em>hoje</em> (fase 1, sem código novo nele) e deixa a integração como decisão incremental futura, não como aposta inicial.</li>
+    </ol>
+  </div>
+
+  <h3>Quadro de decisões</h3>
+  <table>
+    <thead><tr><th>#</th><th>Decisão</th><th>Status</th><th>Registro</th></tr></thead>
+    <tbody>
+      <tr><td>D1</td><td>Estratégia geral (A / B / C)</td><td><span class="badge-open">EM ABERTO</span></td><td>Recomendação técnica: <strong>C — Híbrido</strong>. Comparativo completo na Seção 5. Aguarda definição formal.</td></tr>
+      <tr><td>D2</td><td>Onde vivem ROPA e RIPD do Payproxy</td><td><span class="badge-open">EM ABERTO</span></td><td>Depende de D1. No híbrido: no Datum (Payproxy cadastrado como órgão/tenant). Validar com autor do SEC-001 a leitura de "no sistema, e não em planilha".</td></tr>
+      <tr><td>D3</td><td>"Copiar e colar código" entre projetos</td><td><strong>Descartado (fato técnico)</strong></td><td>Stacks incompatíveis (C#/.NET Framework × PHP/Laravel). Reuso possível é de <em>modelagem de domínio</em>, não de código.</td></tr>
+      <tr><td>D4</td><td>Débito de segurança do próprio Datum</td><td><strong>Recomendado — independe de D1</strong></td><td>Sanar segredos em <code>Web.config</code>, chave AES fixa (<code>CryptoHelper</code>), SHA-256 sem salt e ausência de security headers. Obrigatório antes de qualquer fase 2 (Apêndice A).</td></tr>
+      <tr><td>D5</td><td>Itens de runtime no Payproxy</td><td><strong>Consenso implícito</strong></td><td>Os 11 itens de dados/runtime serão nativos no Payproxy em qualquer cenário — podem iniciar imediatamente, sem esperar D1.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 7 -->
+<h2 class="sec" onclick="toggle(this)">7. Plano por Fases (se confirmado o Híbrido)</h2>
+<div class="sec-body">
+  <h3>Fase 0 — Imediato (independe da decisão)</h3>
+  <ul>
+    <li><strong>Payproxy:</strong> Security Headers (1 dia), Audit Log com <code>owen-it/laravel-auditing</code> ou <code>spatie/laravel-activitylog</code> + permissões de banco append-only (1 sem), Rate Limiting nativo + Redis (2 dias), IP Allowlist (2 dias).</li>
+    <li><strong>Datum:</strong> remover segredos do <code>Web.config</code> e chave fixa do <code>CryptoHelper</code>; adicionar salt ao hash de senha; adicionar security headers no <code>Web.config</code> — mesmo sem API nova, são débitos de um sistema que guarda dados de governança.</li>
+  </ul>
+  <h3>Fase 1 — Curto prazo</h3>
+  <ul>
+    <li><strong>Payproxy (nativo):</strong> Portal do Titular público (landing + verificação por token de e-mail + export PDF/JSON + fila de anonimização com ressalva fiscal do CTN — usar a modelagem da <code>Solicitacao</code> do Datum como blueprint de campos/prazos/status); Retenção e Expurgo (<code>DataRetentionService</code> + scheduler); Consentimento WhatsApp (tabela <code>whatsapp_consents</code>); Data Masking (API Resources + diretiva Vue por perfil); Rotação de API Keys.</li>
+    <li><strong>Governança:</strong> cadastrar o Payproxy como órgão/tenant no Datum; montar o inventário (ROPA) das operações do Payproxy via importação Excel/IA; gerar o RIPD do Payproxy no módulo <code>RelatorioRIPD</code>.</li>
+    <li><strong>Processo:</strong> definir o fluxo operacional — solicitações de titular e incidentes originados no Payproxy são registrados no Datum pelo time (manual, com dono nomeado).</li>
+  </ul>
+  <h3>Fase 2 — Médio prazo (opcional, reavaliar após Fase 1)</h3>
+  <ul>
+    <li><strong>Datum:</strong> API mínima de ingestão (2–3 endpoints REST com token por órgão): <code>POST /api/incidentes</code>, <code>POST /api/solicitacoes</code>. Pré-requisitos: auth por token sem sessão + hardening da Fase 0.</li>
+    <li><strong>Payproxy:</strong> jobs de espelhamento assíncrono (fila + retry + DLQ) — incidente aberto no Payproxy cria caso no Datum automaticamente.</li>
+    <li><strong>Datum (produto):</strong> timer 72h ANPD com countdown + geração de comunicado (lacuna do Art. 48); concluir o portal público do titular (<code>SolicitacaoForm</code>/<code>FormularioModal</code>) — ambos beneficiam todos os clientes do Datum.</li>
+    <li><strong>Payproxy:</strong> Secrets Management (Vault), mTLS, Detecção de Anomalias — conforme prioridade do SEC-001.</li>
+  </ul>
+</div>
+
+<!-- 8 -->
+<h2 class="sec" onclick="toggle(this)">Apêndice A — Achados de Segurança no Datum (para plano de correção)</h2>
+<div class="sec-body">
+  <table>
+    <thead><tr><th>Achado</th><th>Local</th><th>Risco</th></tr></thead>
+    <tbody>
+      <tr><td>Segredos em texto claro (token GitLab, SMTP, AD, <code>machineKey</code> fixa)</td><td><code>LGPD\Web.config</code></td><td>Exposição em backup/versionamento; forja de cookie de auth com a machineKey</td></tr>
+      <tr><td>Chave AES fixa no código-fonte (<code>SecretKey</code> hardcoded)</td><td><code>Nucleo\Helpers\CryptoHelper.cs</code></td><td>Criptografia da senha Oracle é reversível por quem lê o código</td></tr>
+      <tr><td>Senha SQL Server em claro na connection string</td><td><code>Web.config</code></td><td>Acesso direto ao banco em caso de vazamento do arquivo</td></tr>
+      <tr><td>Hash de senha SHA-256 sem salt</td><td><code>Nucleo\Business\Hash.cs</code></td><td>Vulnerável a rainbow table; migrar para bcrypt/PBKDF2/Argon2</td></tr>
+      <tr><td>Sem security headers (CSP, HSTS, X-Frame-Options…)</td><td><code>Web.config</code> (ambos os projetos)</td><td>XSS/clickjacking/sniffing sem mitigação de camada de transporte</td></tr>
+      <tr><td><code>customErrors mode="Off"</code>; cookie Forms sem <code>requireSSL</code></td><td><code>Web.config</code></td><td>Stack traces expostos; cookie de sessão interceptável em HTTP</td></tr>
+      <tr><td>Log automático grava JSON completo da entidade (inclui dados pessoais em claro)</td><td><code>LGPDContext.OnBeforeSaving()</code></td><td>O próprio log vira repositório de dados pessoais sem masking/retenção</td></tr>
+      <tr><td>Endpoint <code>CargaInicial</code> (<code>[AllowAnonymous]</code>, executava SQL) — já desabilitado por comentário</td><td><code>SegurancaController</code></td><td>Confirmar que não há resíduos equivalentes ativos</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 9 -->
+<h2 class="sec" onclick="toggle(this)">Apêndice B — API Interna Existente do Datum</h2>
+<div class="sec-body">
+  <p>Registrada em <code>LGPD\App_Start\WebApiConfig.cs</code> (rota <code>api/{controller}/{action}/{id}</code>), com <strong>filtro global <code>Authorize</code></strong> (os endpoints já foram anônimos e expunham PII — foram fechados). Autenticação por cookie Forms <code>SingleSignOn</code>, consumida server-to-server pelo <code>ValidarAcessoFilter</code> (encaminha o cookie do usuário logado). <strong>Não há API keys, bearer tokens nem webhooks</strong> — é uma API interna de suporte a SSO/telas, não uma base para integração externa.</p>
+  <table>
+    <thead><tr><th>Controller</th><th>Endpoints</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td><code>UsuarioApiController</code></td><td><code>ObterPorLogin</code>, <code>ObterOrgao</code></td><td>Entidade <code>Usuario</code> por login; lista de <code>ConfigOrgao</code> do usuário</td></tr>
+      <tr><td><code>ProfissionalApiController</code></td><td><code>Servicos_CarregarProfissional</code>, <code>Servicos_ObterLider</code>, <code>Servicos_ObterPorArea</code>, <code>Servicos_ObterPrazo</code>…</td><td>Dados de usuários/líderes/áreas para telas de tarefa; cálculo de dias úteis</td></tr>
+      <tr><td><code>AreaApiController</code></td><td><code>Servicos_ObterArea</code>, <code>Servicos_ObterAtivos</code>, <code>Servicos_ObterAreas</code></td><td>Consulta de áreas por profissional/id/login/nome</td></tr>
+    </tbody>
+  </table>
+  <p>Integrações externas existentes no código: leitura de repositório <strong>GitLab</strong> (<code>GitLabBO</code>, token fixo) e provedores de <strong>IA</strong> (<code>Services\Ia</code>) para importação de ROT. Nada voltado a titulares ou a sistemas terceiros.</p>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function toggle(h){
+  var b=h.nextElementSibling,closing=!h.classList.contains('closed');
+  h.classList.toggle('closed',closing);
+  b.classList.toggle('closed',closing);
+  if(!closing)b.style.maxHeight=b.scrollHeight+'px';
+}
+function toggleAll(close){
+  document.querySelectorAll('h2.sec').forEach(function(h){
+    var b=h.nextElementSibling;
+    h.classList.toggle('closed',close);
+    b.classList.toggle('closed',close);
+    if(!close)b.style.maxHeight=b.scrollHeight+'px';
+  });
+}
+</script>

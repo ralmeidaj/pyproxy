@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Especificação de Requisitos — LGPD Gateway</title>
+<style>
+:root{--blue:#1a6fb5;--navy:#1a2a4a;--mid:#1a4a6b;--slate:#2a5a7a;--green:#2a7a2a;--amber:#c47a00;--div:#d0dae8;--div2:#ccd6e0;--bg-rf:#f7fafd;--bg-rnf:#f7fdf7;--bg-rn:#fdf7f0;--bg-meta:#f0f4f8;--bg-zeb:#f5f8fc;--sans:'Segoe UI',Arial,sans-serif;--mono:'Consolas','Courier New',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:11pt;font-family:var(--sans);color:#1a1a1a;background:#fff;}
+body{background:#fff;}
+a{color:var(--blue);}a:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.page{max-width:900px;margin:0 auto;padding:40px 48px;}
+@media print{.page{padding:20px 30px;}}
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:16px;}
+.doc-logo{height:125px;flex-shrink:0;}
+@media print{.doc-logo{height:100px;}}
+.doc-h1{font-size:20pt;font-weight:700;color:var(--navy);line-height:1.15;}
+.doc-sub{font-size:13pt;color:#555;margin-top:4px;}
+.doc-rule{border:none;border-top:3px solid var(--blue);margin:16px 0;}
+.doc-meta{display:flex;gap:24px;flex-wrap:wrap;font-size:9.5pt;color:#555;background:var(--bg-meta);padding:10px 16px;border-radius:3px;}
+.doc-meta span strong{color:#1a1a1a;}
+.toolbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.94);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--div);padding:6px 48px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:9pt;margin:0 calc(-48px + (100vw - 900px)/2);}
+@media(max-width:996px){.toolbar{margin:0 -48px;}}
+@media print{.toolbar{display:none;}}
+.tb-btn{border:1px solid var(--div);background:#fff;color:var(--navy);font-size:9pt;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:var(--sans);}
+.tb-btn:hover{background:var(--bg-meta);}.tb-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.tb-sep{width:1px;height:18px;background:var(--div);margin:0 2px;}
+.tb-legend{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.chip{padding:3px 9px;border-radius:12px;font-size:8.5pt;font-weight:600;}
+.chip-rf{background:#dce9f7;color:var(--blue);}.chip-rn{background:#fdecd5;color:var(--amber);}.chip-rnf{background:#d4edda;color:var(--green);}
+.sec{margin-bottom:4px;}
+.sec-heading{font-weight:700;cursor:pointer;user-select:none;display:flex;align-items:baseline;gap:6px;padding:4px 0;}
+.sec-arr{font-size:9pt;color:var(--blue);flex-shrink:0;transition:transform .2s;}
+.sec-heading.collapsed .sec-arr{transform:rotate(-90deg);}
+.h2{font-size:14pt;color:var(--navy);border-bottom:1px solid var(--div);padding-bottom:6px;margin-top:32px;}
+.h3{font-size:12pt;color:var(--mid);margin-top:20px;}.h4{font-size:11pt;color:var(--slate);margin-top:14px;}
+.sec-body{overflow:hidden;transition:max-height .25s ease,opacity .2s ease;}
+.sec-body.collapsed{max-height:0!important;opacity:0;}
+@media print{.sec-body{max-height:none!important;opacity:1!important;}}
+.req{border-left:4px solid var(--blue);background:var(--bg-rf);border-radius:0 3px 3px 0;margin:10px 0;}
+.req-rnf{border-left-color:var(--green);background:var(--bg-rnf);}.req-rn{border-left-color:var(--amber);background:var(--bg-rn);}
+.req-hd{display:flex;align-items:baseline;gap:6px;padding:9px 14px;cursor:pointer;user-select:none;}
+.req-hd--simple{cursor:default;}
+.req-arr{font-size:8pt;color:var(--blue);flex-shrink:0;transition:transform .2s;}
+.req-rnf .req-arr{color:var(--green);}.req-rn .req-arr{color:var(--amber);}
+.req-hd.collapsed .req-arr{transform:rotate(-90deg);}
+.req-id{font-family:var(--mono);font-size:9.5pt;font-weight:700;color:var(--blue);flex-shrink:0;white-space:nowrap;}
+.req-rnf .req-id{color:var(--green);}.req-rn .req-id{color:var(--amber);}
+.req-txt{font-size:10.5pt;color:#1a1a1a;line-height:1.4;}
+.req-body{padding:2px 14px 12px 36px;overflow:hidden;transition:max-height .25s ease,opacity .2s ease;}
+.req-body.collapsed{max-height:0!important;opacity:0;}
+@media print{.req-body{max-height:none!important;opacity:1!important;}}
+.req-body p{font-size:10pt;line-height:1.6;margin-bottom:8px;color:#222;}
+.req-body ul,.req-body ol{padding-left:20px;margin-bottom:8px;}
+.req-body li{font-size:10pt;line-height:1.55;margin-bottom:4px;}
+.req-sep{height:1px;background:var(--div);margin:18px 0;}
+pre{background:var(--bg-meta);border:1px solid var(--div2);border-radius:3px;padding:12px 16px;overflow-x:auto;margin:10px 0;}
+pre code{font-family:var(--mono);font-size:9.5pt;color:#1a3a5a;line-height:1.65;}
+code{font-family:var(--mono);font-size:9.5pt;color:#1a3a5a;background:var(--bg-meta);padding:1px 4px;border-radius:2px;}
+pre code{background:none;padding:0;}
+.table-wrap{overflow-x:auto;margin:12px 0;}
+table{border-collapse:collapse;width:100%;font-size:10pt;}
+thead tr{background:var(--navy);color:#fff;}
+th{padding:8px 12px;text-align:left;font-weight:600;font-size:9.5pt;}
+td{padding:7px 12px;border:1px solid var(--div2);color:#222;}
+tbody tr:nth-child(even){background:var(--bg-zeb);}
+p{font-size:11pt;line-height:1.65;margin-bottom:10px;color:#1a1a1a;}
+ul,ol{padding-left:22px;margin-bottom:10px;}
+li{font-size:10.5pt;line-height:1.6;margin-bottom:4px;}
+@media print{
+  html{font-size:10pt;}.doc-logo{height:100px;}.doc-h1{font-size:17pt;}.h2{font-size:12pt;}
+  .req-body,.sec-body{max-height:none!important;opacity:1!important;}
+  .req-arr,.sec-arr{display:none;}
+  @page{size:A4;margin:2cm 1.8cm;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="doc-header">
+    <div>
+      <div class="doc-h1">Especificação de Requisitos</div>
+      <div class="doc-sub">LGPD Gateway — Integração Payproxy × Datum</div>
+    </div>
+    <img class="doc-logo" src="data:image/jpeg;base64,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" alt="Ciberian">
+  </div>
+  <hr class="doc-rule">
+  <div class="doc-meta">
+    <span><strong>Documento:</strong> Especificação de Requisitos — LGPD Gateway</span>
+    <span><strong>Versão:</strong> 1.0</span>
+    <span><strong>Data:</strong> 21/07/2026</span>
+    <span><strong>Status:</strong> Em elaboração</span>
+  </div>
+</div>
+<div class="toolbar" id="toolbar">
+  <button class="tb-btn" onclick="secAll(true)">&#9660; Seções</button>
+  <button class="tb-btn" onclick="secAll(false)">&#9658; Seções</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="reqAll(true)">&#9660; Requisitos</button>
+  <button class="tb-btn" onclick="reqAll(false)">&#9658; Requisitos</button>
+  <button class="tb-btn" id="btn-rf"  onclick="filterReq('rf')">Só RF-GW</button>
+  <button class="tb-btn" id="btn-rn"  onclick="filterReq('rn')">Só RF-DC</button>
+  <button class="tb-btn" id="btn-rnf" onclick="filterReq('rnf')">Só RNF-GW</button>
+  <button class="tb-btn" id="btn-all" onclick="filterReq('all')">Todos</button>
+  <div class="tb-legend">
+    <span class="chip chip-rf">RF-GW</span>
+    <span class="chip chip-rn">RF-DC</span>
+    <span class="chip chip-rnf">RNF-GW</span>
+  </div>
+</div>
+<div class="page" id="content">
+  <section class="sec" id="s1"><div class="sec-heading h2"><span class="sec-arr">▼</span>Contexto</div><div class="sec-body"><p>O <strong>LGPD Gateway</strong> é um projeto Laravel independente desenvolvido pela Ciberian que atua como camada de integração entre o <strong>Payproxy</strong> e o sistema de gestão LGPD de cada município cliente (ex.: Datum). Cada município mantém seu registro de operações de tratamento (ROT) e relatórios de impacto (RIPD) no seu próprio sistema LGPD, instalado no servidor da prefeitura. O Gateway padroniza o acesso a esses dados via Strategy Pattern — um novo cliente é integrado adicionando uma nova Strategy, sem nenhuma alteração no Payproxy.</p>
+<section class="sec" id="s2"><div class="sec-heading h3"><span class="sec-arr">▼</span>Posicionamento no ecossistema</div><div class="sec-body"><pre><code class="lang-">Payproxy  ──HTTPS / X-Api-Key──►  LGPD Gateway (este projeto)
+                                       │
+                              Strategy Factory (por tenant_id)
+                                       │
+               ┌───────────────────────┼───────────────────────┐
+               ▼                       ▼                       ▼
+   Datum Connector Salvador   Datum Connector Alagoinhas  Datum Connector X
+   (.NET — servidor SEFAZ)    (.NET — servidor Alagoinhas) (.NET — servidor X)
+               │                       │                       │
+         Datum SQL Server        Datum SQL Server        Datum SQL Server</code></pre>
+</div></section>
+<section class="sec" id="s3"><div class="sec-heading h3"><span class="sec-arr">▼</span>Componentes</div><div class="sec-body"><div class="table-wrap"><table><thead><tr><th>Componente</th><th>Tecnologia</th><th>Responsável</th><th>Onde roda</th></tr></thead><tbody><tr><td>LGPD Gateway</td><td>Laravel 11 / PHP 8.3</td><td>Ciberian</td><td>Infra Ciberian (Docker)</td></tr><tr><td>Datum Connector</td><td>.NET 8 WebAPI (template)</td><td>Ciberian</td><td>Servidor do cliente</td></tr><tr><td>Datum</td><td>Sistema LGPD municipal (terceiro)</td><td>Prefeitura</td><td>Servidor do cliente</td></tr></tbody></table></div>
+<div class="req-sep"></div>
+</div></section>
+</div></section>
+<section class="sec" id="s4"><div class="sec-heading h2"><span class="sec-arr">▼</span>1. Requisitos Funcionais — LGPD Gateway</div><div class="sec-body"><section class="sec" id="s5"><div class="sec-heading h3"><span class="sec-arr">▼</span>1.1 API REST exposta ao Payproxy</div><div class="sec-body"><div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-01</span><span class="req-txt">O Gateway deve expor uma API REST autenticada por API Key via header <code>X-Api-Key</code>. Toda requisição sem key válida retorna HTTP 401.</span></div></div>
+<div class="req"><div class="req-hd"><span class="req-arr">▼</span><span class="req-id">RF-GW-02</span><span class="req-txt"><code>GET /api/rot?tenant_id={id}</code> retorna a lista de itens do ROT (Registro de Operações de Tratamento) do tenant informado, no formato:</span></div><div class="req-body"><pre><code>{
+  "tenant_id": "42",
+  "orgao": "SEFAZ Salvador",
+  "items": [
+    {
+      "id": "rot-001",
+      "operacao": "Emissão de boleto de cobrança",
+      "categorias_dados": ["Nome", "CPF", "Endereço", "E-mail"],
+      "finalidade": "Cobrança de tributos municipais",
+      "base_legal": "Obrigação Legal",
+      "responsavel_dpo": "Maria Silva",
+      "ultima_revisao": "2026-06-01",
+      "status": "Em conformidade"
+    }
+  ],
+  "generated_at": "2026-07-21T14:00:00Z",
+  "source": "datum-connector-v2"
+}</code></pre></div></div>
+<div class="req"><div class="req-hd"><span class="req-arr">▼</span><span class="req-id">RF-GW-03</span><span class="req-txt"><code>GET /api/ripd?tenant_id={id}</code> retorna a lista de relatórios de impacto (RIPD) do tenant informado, no formato:</span></div><div class="req-body"><pre><code>{
+  "tenant_id": "42",
+  "orgao": "SEFAZ Salvador",
+  "reports": [
+    {
+      "id": "ripd-001",
+      "titulo": "RIPD — Emissão e cobrança de IPTU",
+      "operacoes_avaliadas": ["rot-001", "rot-002"],
+      "nivel_risco": "Médio",
+      "status": "Finalizado",
+      "data_elaboracao": "2026-05-10",
+      "responsavel_dpo": "Maria Silva",
+      "data_assinatura": "2026-05-15"
+    }
+  ],
+  "generated_at": "2026-07-21T14:00:00Z",
+  "source": "datum-connector-v2"
+}</code></pre></div></div>
+<div class="req"><div class="req-hd"><span class="req-arr">▼</span><span class="req-id">RF-GW-04</span><span class="req-txt"><code>GET /api/health?tenant_id={id}</code> retorna o status de conectividade com o Datum Connector do tenant:</span></div><div class="req-body"><pre><code>{
+  "tenant_id": "42",
+  "connector_status": "online",
+  "connector_url": "https://datum-connector.sefaz.salvador.ba.gov.br",
+  "datum_version": "2.1.3",
+  "latency_ms": 124,
+  "checked_at": "2026-07-21T14:00:00Z"
+}</code></pre></div></div>
+<div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-05</span><span class="req-txt"><code>GET /api/tenants</code> retorna a lista de tenants configurados no Gateway com seus respectivos status de conectividade. Requer header <code>X-Admin-Key</code> (chave separada para operações administrativas).</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s6"><div class="sec-heading h3"><span class="sec-arr">▼</span>1.2 Strategy Factory — Roteamento por Tenant</div><div class="sec-body"><div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-06</span><span class="req-txt">O Gateway deve implementar o padrão Strategy para roteamento de requisições: cada tenant mapeado no arquivo de configuração possui uma classe Strategy correspondente que conhece a URL, credencial e lógica de comunicação com o Datum Connector daquele cliente.</span></div></div>
+<div class="req"><div class="req-hd"><span class="req-arr">▼</span><span class="req-id">RF-GW-07</span><span class="req-txt">A Strategy Factory deve receber o <code>tenant_id</code> e retornar a Strategy correta. Tenant sem Strategy configurada retorna resposta padronizada com status <code>not_configured</code>:</span></div><div class="req-body"><pre><code>{
+  "tenant_id": "99",
+  "status": "not_configured",
+  "message": "Governança LGPD não configurada para este tenant."
+}</code></pre></div></div>
+<div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-08</span><span class="req-txt">Adicionar um novo cliente requer apenas: criar nova classe Strategy em <code>app/Services/Strategies/</code>, adicionar entrada em <code>config/datum_clients.php</code> e definir as variáveis de ambiente correspondentes. Nenhuma alteração no Payproxy é necessária.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s7"><div class="sec-heading h3"><span class="sec-arr">▼</span>1.3 Cache de Respostas</div><div class="sec-body"><div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-09</span><span class="req-txt">As respostas dos endpoints <code>/api/rot</code> e <code>/api/ripd</code> devem ser cacheadas no Redis por <strong>5 minutos</strong> (TTL configurável por tenant). O cache é invalidado automaticamente por TTL — não há invalidação manual (dados de ROT/RIPD mudam raramente).</span></div></div>
+<div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-10</span><span class="req-txt">O header <code>X-Cache</code> indica o estado da resposta: <code>HIT</code> (servido do cache) ou <code>MISS</code> (consultado ao Connector). O header <code>X-Cache-TTL</code> indica o tempo restante em segundos.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s8"><div class="sec-heading h3"><span class="sec-arr">▼</span>1.4 Tratamento de Falhas</div><div class="sec-body"><div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-11</span><span class="req-txt">Se o Datum Connector de um tenant estiver indisponível (timeout ou erro HTTP), o Gateway retorna HTTP 200 com os dados do cache (se existir e não expirado) e header <code>X-Datum-Status: cached</code>. Se o cache também estiver expirado, retorna HTTP 200 com <code>status: unavailable</code> e array vazio — nunca HTTP 5xx para o Payproxy.</span></div></div>
+<div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-12</span><span class="req-txt">Cada falha de comunicação com um Datum Connector é registrada em log com: tenant_id, URL tentada, código de erro, latência e timestamp. Falhas consecutivas (configurável, padrão: 5 em 10 minutos) geram alerta por e-mail para a equipe Ciberian.</span></div></div>
+<div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-13</span><span class="req-txt">O isolamento entre tenants é total: a indisponibilidade do Connector de um município não afeta as requisições de outros municípios.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s9"><div class="sec-heading h3"><span class="sec-arr">▼</span>1.5 Auditoria</div><div class="sec-body"><div class="req"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-GW-14</span><span class="req-txt">Toda requisição recebida pelo Gateway é registrada em <code>gateway_logs</code> com: tenant_id, endpoint, resultado (success/not_configured/unavailable/cached), itens retornados, latência total e latência do Connector.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+</div></section>
+<section class="sec" id="s10"><div class="sec-heading h2"><span class="sec-arr">▼</span>2. Requisitos Funcionais — Datum Connector (.NET)</div><div class="sec-body"><p>O Datum Connector é um projeto .NET 8 WebAPI fornecido como template pela Ciberian. Cada cliente recebe uma cópia do template, configurada para o seu ambiente Datum específico.</p>
+<section class="sec" id="s11"><div class="sec-heading h3"><span class="sec-arr">▼</span>2.1 API REST exposta ao Gateway</div><div class="sec-body"><div class="req req-rn"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-DC-01</span><span class="req-txt">O Connector expõe API REST autenticada por API Key via header <code>X-Api-Key</code>. Toda requisição sem key válida retorna HTTP 401.</span></div></div>
+<div class="req req-rn"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-DC-02</span><span class="req-txt"><code>GET /rot?orgao_id={id}</code> retorna os itens de ROT do órgão informado, lidos diretamente do banco de dados Datum (SQL Server). A estrutura de retorno segue o schema normalizado definido pela Ciberian, compatível com todas as versões do Datum suportadas.</span></div></div>
+<div class="req req-rn"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-DC-03</span><span class="req-txt"><code>GET /ripd?orgao_id={id}</code> retorna os relatórios RIPD do órgão informado.</span></div></div>
+<div class="req req-rn"><div class="req-hd"><span class="req-arr">▼</span><span class="req-id">RF-DC-04</span><span class="req-txt"><code>GET /health</code> retorna status do Connector e versão do Datum detectada:</span></div><div class="req-body"><pre><code>{
+  "status": "healthy",
+  "datum_version": "2.1.3",
+  "database": "connected",
+  "uptime_seconds": 86400
+}</code></pre></div></div>
+<div class="req req-rn"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-DC-05</span><span class="req-txt">O Connector implementa um Repository por versão do schema Datum (<code>RotRepositoryV1</code>, <code>RotRepositoryV2</code>), detectado automaticamente na inicialização. Atualização do Datum pelo cliente requer apenas adicionar o Repository da nova versão — sem alteração no Gateway.</span></div></div>
+<div class="req req-rn"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RF-DC-06</span><span class="req-txt">O Connector nunca expõe dados de outros órgãos — o <code>orgao_id</code> é validado contra a lista de órgãos permitidos configurada no <code>appsettings.json</code>. Requisição com <code>orgao_id</code> não autorizado retorna HTTP 403.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+</div></section>
+<section class="sec" id="s12"><div class="sec-heading h2"><span class="sec-arr">▼</span>3. Requisitos Não Funcionais</div><div class="sec-body"><section class="sec" id="s13"><div class="sec-heading h3"><span class="sec-arr">▼</span>3.1 Segurança</div><div class="sec-body"><div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-01</span><span class="req-txt">Toda comunicação entre Payproxy → Gateway e Gateway → Connector deve ser feita sobre HTTPS/TLS 1.3. Requisições HTTP sem TLS são recusadas.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-02</span><span class="req-txt">As API Keys do Gateway são armazenadas como hash SHA-256 — o valor completo não é recuperável. A key do Payproxy e a key administrativa (<code>X-Admin-Key</code>) são distintas e têm escopos separados.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-03</span><span class="req-txt">As credenciais dos Datum Connectors (URL + API Key por cliente) são armazenadas em variáveis de ambiente — nunca em banco de dados ou código-fonte.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-04</span><span class="req-txt">O Gateway não armazena nenhum dado pessoal de contribuintes — apenas metadados operacionais (ROT/RIPD são dados institucionais do DPO, não dados de titulares).</span></div></div>
+</div></section>
+<section class="sec" id="s14"><div class="sec-heading h3"><span class="sec-arr">▼</span>3.2 Performance e Disponibilidade</div><div class="sec-body"><div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-05</span><span class="req-txt">O tempo de resposta do Gateway (excluindo latência do Connector) deve ser inferior a <strong>200ms</strong> em p95. Com cache ativo, inferior a <strong>20ms</strong>.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-06</span><span class="req-txt">O Gateway deve ter disponibilidade mínima de <strong>99,5%</strong> mensal. A indisponibilidade de um Datum Connector não é contabilizada como indisponibilidade do Gateway.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-07</span><span class="req-txt">O Gateway deve ser deployado como container Docker, compatível com a infraestrutura Ciberian existente.</span></div></div>
+</div></section>
+<section class="sec" id="s15"><div class="sec-heading h3"><span class="sec-arr">▼</span>3.3 Extensibilidade</div><div class="sec-body"><div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-08</span><span class="req-txt">Adicionar suporte a um novo município deve levar no máximo <strong>1 dia de trabalho</strong> — criação da Strategy, configuração do <code>.env</code> e deploy. Sem alteração em código existente do Gateway.</span></div></div>
+<div class="req req-rnf"><div class="req-hd req-hd--simple"><span class="req-arr">—</span><span class="req-id">RNF-GW-09</span><span class="req-txt">O Datum Connector (.NET) deve ser fornecido como template com documentação de instalação suficiente para que a equipe técnica da prefeitura instale e configure sem apoio presencial da Ciberian.</span></div></div>
+<div class="req-sep"></div>
+</div></section>
+</div></section>
+<section class="sec" id="s16"><div class="sec-heading h2"><span class="sec-arr">▼</span>4. Estrutura de Configuração</div><div class="sec-body"><section class="sec" id="s17"><div class="sec-heading h3"><span class="sec-arr">▼</span><code>config/datum_clients.php</code></div><div class="sec-body"><pre><code class="lang-php">return [
+    // tenant_id =&gt; configuração do Datum Connector
+    '1' =&gt; [
+        'strategy'  =&gt; \App\Services\Strategies\SalvadorDatumStrategy::class,
+        'url'       =&gt; env('DATUM_SALVADOR_URL'),
+        'api_key'   =&gt; env('DATUM_SALVADOR_KEY'),
+        'orgao_id'  =&gt; env('DATUM_SALVADOR_ORGAO_ID'),
+        'timeout'   =&gt; 5, // segundos
+        'cache_ttl' =&gt; 300, // segundos
+    ],
+    '2' =&gt; [
+        'strategy'  =&gt; \App\Services\Strategies\AlagoínhasDatumStrategy::class,
+        'url'       =&gt; env('DATUM_ALAGOINHAS_URL'),
+        'api_key'   =&gt; env('DATUM_ALAGOINHAS_KEY'),
+        'orgao_id'  =&gt; env('DATUM_ALAGOINHAS_ORGAO_ID'),
+        'timeout'   =&gt; 5,
+        'cache_ttl' =&gt; 300,
+    ],
+];</code></pre>
+</div></section>
+<section class="sec" id="s18"><div class="sec-heading h3"><span class="sec-arr">▼</span>Variáveis de ambiente (.env)</div><div class="sec-body"><pre><code class="lang-env"># Autenticação — Payproxy
+GATEWAY_API_KEY=&lt;key longa aleatória — gerada na instalação&gt;
+GATEWAY_ADMIN_KEY=&lt;key administrativa — acesso restrito à Ciberian&gt;
+
+# Cache
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# Alertas de falha
+ALERT_EMAIL=ops@ciberian.com.br
+ALERT_CONSECUTIVE_FAILURES=5
+ALERT_WINDOW_MINUTES=10
+
+# Datum Connector — Salvador
+DATUM_SALVADOR_URL=https://datum-connector.sefaz.salvador.ba.gov.br
+DATUM_SALVADOR_KEY=&lt;key fornecida pelo Connector instalado em Salvador&gt;
+DATUM_SALVADOR_ORGAO_ID=SSA-001
+
+# Datum Connector — Alagoinhas
+DATUM_ALAGOINHAS_URL=https://datum-connector.alagoinhas.ba.gov.br
+DATUM_ALAGOINHAS_KEY=&lt;key fornecida pelo Connector instalado em Alagoinhas&gt;
+DATUM_ALAGOINHAS_ORGAO_ID=ALA-001</code></pre>
+<div class="req-sep"></div>
+</div></section>
+</div></section>
+<section class="sec" id="s19"><div class="sec-heading h2"><span class="sec-arr">▼</span>5. Estrutura de Pastas — LGPD Gateway</div><div class="sec-body"><pre><code class="lang-">lgpd-gateway/
+├── app/
+│   ├── Contracts/
+│   │   └── DatumStrategyInterface.php   # getRotItems() · getRipdReports() · healthCheck()
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── RotController.php
+│   │   │   ├── RipdController.php
+│   │   │   ├── HealthController.php
+│   │   │   └── TenantController.php
+│   │   ├── Middleware/
+│   │   │   └── GatewayApiKeyMiddleware.php
+│   │   └── Resources/
+│   │       ├── RotResource.php
+│   │       └── RipdResource.php
+│   ├── Models/
+│   │   └── GatewayLog.php
+│   └── Services/
+│       ├── DatumGatewayService.php       # factory: tenant_id → Strategy
+│       └── Strategies/
+│           ├── SalvadorDatumStrategy.php
+│           └── AlagoínhasDatumStrategy.php
+├── config/
+│   └── datum_clients.php
+├── database/migrations/
+│   └── create_gateway_logs_table.php
+└── routes/
+    └── api.php</code></pre>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s20"><div class="sec-heading h2"><span class="sec-arr">▼</span>6. Estrutura de Pastas — Datum Connector (.NET)</div><div class="sec-body"><pre><code class="lang-">datum-connector/
+├── src/
+│   ├── Controllers/
+│   │   ├── RotController.cs
+│   │   ├── RipdController.cs
+│   │   └── HealthController.cs
+│   ├── Repositories/
+│   │   ├── IRotRepository.cs
+│   │   ├── IRotRepository.cs
+│   │   ├── RotRepositoryV1.cs   # schema Datum v1.x
+│   │   └── RotRepositoryV2.cs   # schema Datum v2.x
+│   ├── Models/
+│   │   ├── RotItem.cs
+│   │   └── RipdReport.cs
+│   └── Middleware/
+│       └── ApiKeyMiddleware.cs
+├── appsettings.json              # orgao_ids permitidos, connection string
+├── Dockerfile
+└── README.md</code></pre>
+<div class="req-sep"></div>
+</div></section>
+<section class="sec" id="s21"><div class="sec-heading h2"><span class="sec-arr">▼</span>7. Numeração de Requisitos</div><div class="sec-body"><div class="table-wrap"><table><thead><tr><th>Prefixo</th><th>Tipo</th><th>Intervalo</th></tr></thead><tbody><tr><td><code>RF-GW-xx</code></td><td>Funcional — LGPD Gateway</td><td>RF-GW-01 a RF-GW-14</td></tr><tr><td><code>RF-DC-xx</code></td><td>Funcional — Datum Connector</td><td>RF-DC-01 a RF-DC-06</td></tr><tr><td><code>RNF-GW-xx</code></td><td>Não Funcional</td><td>RNF-GW-01 a RNF-GW-09</td></tr></tbody></table></div>
+</div></section>
+
+</div>
+<script>
+function initSections(){document.querySelectorAll('.sec-heading').forEach(hd=>{const sb=hd.nextElementSibling;if(!sb||!sb.classList.contains('sec-body'))return;sb.style.maxHeight=sb.scrollHeight+'px';hd.addEventListener('click',()=>{const open=!hd.classList.contains('collapsed');hd.classList.toggle('collapsed',open);sb.classList.toggle('collapsed',open);if(!open)sb.style.maxHeight=sb.scrollHeight+'px';});});}
+function secAll(open){document.querySelectorAll('.sec-heading').forEach(hd=>{const sb=hd.nextElementSibling;if(!sb)return;hd.classList.toggle('collapsed',!open);sb.classList.toggle('collapsed',!open);if(open)sb.style.maxHeight=sb.scrollHeight+'px';});}
+function initReqs(){document.querySelectorAll('.req-hd:not(.req-hd--simple)').forEach(hd=>{const rb=hd.nextElementSibling;if(!rb||!rb.classList.contains('req-body'))return;rb.style.maxHeight=rb.scrollHeight+'px';hd.addEventListener('click',()=>{const open=!hd.classList.contains('collapsed');hd.classList.toggle('collapsed',open);rb.classList.toggle('collapsed',open);if(!open)rb.style.maxHeight=rb.scrollHeight+'px';});});}
+function reqAll(open){document.querySelectorAll('.req-hd:not(.req-hd--simple)').forEach(hd=>{const rb=hd.nextElementSibling;if(!rb)return;hd.classList.toggle('collapsed',!open);rb.classList.toggle('collapsed',!open);if(open)rb.style.maxHeight=rb.scrollHeight+'px';});}
+function filterReq(type){['rf','rn','rnf','all'].forEach(t=>{const b=document.getElementById('btn-'+t);if(b)b.classList.toggle('active',t===type);});document.querySelectorAll('.req').forEach(r=>{if(type==='all'){r.style.display='';return;}const isRnf=r.classList.contains('req-rnf');const isRn=r.classList.contains('req-rn');const isRf=!isRnf&&!isRn;if(type==='rf')r.style.display=isRf?'':'none';if(type==='rn')r.style.display=isRn?'':'none';if(type==='rnf')r.style.display=isRnf?'':'none';});}
+document.addEventListener('DOMContentLoaded',()=>{initSections();initReqs();document.getElementById('btn-all').classList.add('active');});
+</script>
+</body>
+</html>
