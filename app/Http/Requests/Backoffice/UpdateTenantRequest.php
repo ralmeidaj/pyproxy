@@ -21,6 +21,7 @@ class UpdateTenantRequest extends FormRequest
             'phone'               => ['nullable', 'string', 'max:20'],
             'communication_model' => ['required', Rule::enum(CommunicationModel::class)],
             'notes'               => ['nullable', 'string', 'max:2000'],
+            'allowed_ips'         => ['nullable', 'string', 'max:5000'],
             'email_entity_name'   => ['nullable', 'string', 'max:150'],
             'email_logo_url'      => ['nullable', 'url', 'max:2048'],
             'email_custom_text'   => ['nullable', 'string', 'max:1000'],

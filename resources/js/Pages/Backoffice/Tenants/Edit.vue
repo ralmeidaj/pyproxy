@@ -11,6 +11,7 @@ const form = useForm({
     phone:               props.tenant.phone ?? '',
     communication_model: props.tenant.communication_model,
     notes:               props.tenant.notes ?? '',
+    allowed_ips:         (props.tenant.allowed_ips ?? []).join(', '),
     email_entity_name:   props.tenant.email_entity_name ?? '',
     email_logo_url:      props.tenant.email_logo_url ?? '',
     email_custom_text:   props.tenant.email_custom_text ?? '',
@@ -93,6 +94,16 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Observações</label>
                         <textarea v-model="form.notes" rows="3"
                             class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors resize-none" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">IPs Permitidos (Allowlist)</label>
+                        <textarea v-model="form.allowed_ips" rows="2"
+                            placeholder="Ex: 189.6.1.10, 189.6.1.0/24"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3a9fd8]/30 focus:border-[#3a9fd8] transition-colors resize-none"
+                            :class="form.errors.allowed_ips ? 'border-red-300 bg-red-50' : ''" />
+                        <p class="mt-1 text-xs text-gray-400">Deixe vazio para permitir qualquer IP. Separe múltiplos endereços por vírgula. Suporta notação CIDR (ex: 189.6.0.0/24).</p>
+                        <p v-if="form.errors.allowed_ips" class="mt-1 text-xs text-red-500">{{ form.errors.allowed_ips }}</p>
                     </div>
                 </div>
 

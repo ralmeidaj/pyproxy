@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 // API pública v1 — autenticada via API Key (RF-AC-14)
-Route::prefix('v1')->name('api.v1.')->middleware(['api.key'])->group(function () {
+Route::prefix('v1')->name('api.v1.')->middleware(['api.key', 'tenant.ip'])->group(function () {
 
     // Lote de boletos (RF-16, RF-17) — declarado antes de {boleto} por boas práticas de rota
     Route::post('boletos/batch', [BatchController::class, 'store'])->name('boletos.batch.store');

@@ -73,7 +73,7 @@ class TenantController extends Controller
     public function edit(Tenant $tenant): Response
     {
         return Inertia::render('Backoffice/Tenants/Edit', [
-            'tenant' => $tenant->only('id', 'name', 'document', 'email', 'phone', 'communication_model', 'notes', 'email_entity_name', 'email_logo_url', 'email_custom_text'),
+            'tenant' => $tenant->only('id', 'name', 'document', 'email', 'phone', 'communication_model', 'notes', 'allowed_ips', 'email_entity_name', 'email_logo_url', 'email_custom_text'),
         ]);
     }
 
@@ -85,6 +85,10 @@ class TenantController extends Controller
             return back()->withErrors(['document' => 'CNPJ inválido.'])->withInput();
         }
 
+        $allowedIps = $request->filled('allowed_ips')
+            ? array_values(array_filter(array_map('trim', explode(',', $request->allowed_ips))))
+            : null;
+
         $tenant->update([
             'name'                => $request->name,
             'document'            => $document,
@@ -92,6 +96,7 @@ class TenantController extends Controller
             'phone'               => $request->phone,
             'communication_model' => $request->communication_model,
             'notes'               => $request->notes,
+            'allowed_ips'         => $allowedIps ?: null,
             'email_entity_name'   => $request->email_entity_name ?: null,
             'email_logo_url'      => $request->email_logo_url ?: null,
             'email_custom_text'   => $request->email_custom_text ?: null,

@@ -103,7 +103,7 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
 
     Route::middleware('guest:backoffice')->name('auth.')->prefix('auth')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login.show');
-        Route::post('login', [LoginController::class, 'store'])->name('login.store');
+        Route::post('login', [LoginController::class, 'store'])->name('login.store')->middleware('throttle:5,15');
 
         Route::get('totp', [TotpController::class, 'show'])->name('totp.show');
         Route::post('totp', [TotpController::class, 'store'])->name('totp.store');
@@ -191,7 +191,7 @@ Route::prefix('portal')->name('portal.')->group(function () {
 
     Route::middleware('guest:portal')->name('auth.')->prefix('auth')->group(function () {
         Route::get('login', [PortalLoginController::class, 'show'])->name('login.show');
-        Route::post('login', [PortalLoginController::class, 'store'])->name('login.store');
+        Route::post('login', [PortalLoginController::class, 'store'])->name('login.store')->middleware('throttle:5,15');
 
         Route::get('totp', [PortalTotpController::class, 'show'])->name('totp.show');
         Route::post('totp', [PortalTotpController::class, 'store'])->name('totp.store');

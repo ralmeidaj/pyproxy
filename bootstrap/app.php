@@ -4,6 +4,7 @@ use App\Http\Middleware\BackofficeAuthenticate;
 use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PortalAuthenticate;
+use App\Http\Middleware\SecurityHeadersMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,12 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
         ]);
 
+        $middleware->append(SecurityHeadersMiddleware::class);
+
         $middleware->alias([
             'auth.backoffice'        => BackofficeAuthenticate::class,
             'auth.portal'            => PortalAuthenticate::class,
             'check.password.expiry'  => CheckPasswordExpiry::class,
             'api.key'                => \App\Http\Middleware\ApiKeyMiddleware::class,
             'tenant.scope'           => \App\Http\Middleware\TenantScopeMiddleware::class,
+            'tenant.ip'              => \App\Http\Middleware\TenantIpAllowlistMiddleware::class,
             'webhook.hmac'           => \App\Http\Middleware\HmacWebhookMiddleware::class,
         ]);
 

@@ -21,6 +21,7 @@ class Tenant extends Model
         'status',
         'communication_model',
         'notes',
+        'allowed_ips',
         'email_entity_name',
         'email_logo_url',
         'email_custom_text',
@@ -31,6 +32,7 @@ class Tenant extends Model
         return [
             'status'              => \App\Enums\TenantStatus::class,
             'communication_model' => \App\Enums\CommunicationModel::class,
+            'allowed_ips'         => 'array',
         ];
     }
 
