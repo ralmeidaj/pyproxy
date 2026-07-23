@@ -86,6 +86,22 @@
     Você pode pagar via internet banking, aplicativo do seu banco ou em qualquer agência bancária, lotérica ou correspondente bancário.
 </p>
 
+{{-- Opt-in WhatsApp --}}
+@if(!empty($whatsappOptInUrl))
+<div style="margin-top:24px;padding:16px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+    <p style="margin:0 0 10px;font-size:13px;color:#166534;font-weight:600;">
+        Receba também pelo WhatsApp!
+    </p>
+    <p style="margin:0 0 14px;font-size:13px;color:#166534;line-height:1.5;">
+        Autorize o envio de notificações de boletos via WhatsApp e fique sempre informado.
+    </p>
+    <a href="{{ $whatsappOptInUrl }}" target="_blank"
+        style="display:inline-block;background:#16a34a;color:#ffffff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+        Autorizar WhatsApp
+    </a>
+</div>
+@endif
+
 {{-- Pixel AR Digital (rastreamento de abertura) — invisível, deve ficar ao final do conteúdo --}}
 @if($arNotification && $pixelTracking)
 <img src="{{ route('ar.pixel', ['token' => $arNotification->token]) }}"

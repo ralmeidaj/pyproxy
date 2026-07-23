@@ -1,6 +1,7 @@
 <script setup>
 import { router } from '@inertiajs/vue3'
 import PortalLayout from '@/Layouts/PortalLayout.vue'
+import MaskedField from '@/Components/MaskedField.vue'
 
 const props = defineProps({
     boleto: Object,
@@ -30,6 +31,29 @@ function formatDateOnly(dateStr) {
 
 function copyText(text) {
     navigator.clipboard.writeText(text)
+}
+
+function maskDoc(doc) {
+    if (!doc) return '—'
+    const d = doc.replace(/\D/g, '')
+    if (d.length === 11) return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`
+    if (d.length === 14) return `**.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-**`
+    return doc
+}
+
+function maskEmail(email) {
+    if (!email) return '—'
+    const [user, domain] = email.split('@')
+    if (!domain) return email
+    return user.slice(0, 1) + '***@' + domain
+}
+
+function maskPhone(phone) {
+    if (!phone) return '—'
+    const d = phone.replace(/\D/g, '')
+    if (d.length === 11) return `(${d.slice(0,2)}) *****-${d.slice(7)}`
+    if (d.length === 10) return `(${d.slice(0,2)}) ****-${d.slice(6)}`
+    return phone
 }
 
 function cancelBoleto() {
@@ -110,15 +134,21 @@ function resendNotification() {
                         </div>
                         <div>
                             <dt class="text-gray-500">CPF / CNPJ</dt>
-                            <dd class="font-mono">{{ boleto.payer_document }}</dd>
+                            <dd class="font-mono">
+                                <MaskedField :value="boleto.payer_document" :masked="maskDoc(boleto.payer_document)" field="payer_document" />
+                            </dd>
                         </div>
                         <div v-if="boleto.payer_email">
                             <dt class="text-gray-500">E-mail</dt>
-                            <dd>{{ boleto.payer_email }}</dd>
+                            <dd>
+                                <MaskedField :value="boleto.payer_email" :masked="maskEmail(boleto.payer_email)" field="payer_email" />
+                            </dd>
                         </div>
                         <div v-if="boleto.payer_phone">
                             <dt class="text-gray-500">Telefone</dt>
-                            <dd>{{ boleto.payer_phone }}</dd>
+                            <dd>
+                                <MaskedField :value="boleto.payer_phone" :masked="maskPhone(boleto.payer_phone)" field="payer_phone" />
+                            </dd>
                         </div>
                     </dl>
                 </div>

@@ -2,14 +2,17 @@
 
 namespace App\Jobs;
 
+use App\Enums\CommunicationModel;
 use App\Enums\NotificationEvent;
 use App\Mail\BoletoNotificationMail;
 use App\Models\ArDigitalNotification;
 use App\Models\Boleto;
 use App\Models\NotificationLog;
+use App\Models\WhatsappConsent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 class SendEmailNotificationJob implements ShouldQueue
 {
@@ -49,8 +52,23 @@ class SendEmailNotificationJob implements ShouldQueue
             }
         }
 
+        // Opt-in WhatsApp: incluir link no e-mail de emissão quando não há consentimento
+        $whatsappOptInUrl = null;
+        if ($event === NotificationEvent::Issued
+            && $boleto->tenant->communication_model === CommunicationModel::EmailWhatsApp
+            && $boleto->payer_document
+            && $boleto->payer_phone
+            && ! WhatsappConsent::hasActiveConsent($boleto->tenant_id, $boleto->payer_document)
+        ) {
+            $whatsappOptInUrl = URL::signedRoute(
+                'whatsapp.opt-in',
+                ['boleto' => $boleto->id],
+                now()->addDays(30),
+            );
+        }
+
         Mail::to($boleto->payer_email)
-            ->send(new BoletoNotificationMail($boleto, $event, $arNotification, $pixelTracking));
+            ->send(new BoletoNotificationMail($boleto, $event, $arNotification, $pixelTracking, $whatsappOptInUrl));
 
         $this->updateLog('sent');
     }

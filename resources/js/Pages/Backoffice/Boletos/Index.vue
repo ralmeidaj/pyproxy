@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import BackofficeLayout from '@/Layouts/BackofficeLayout.vue'
+import MaskedField from '@/Components/MaskedField.vue'
 
 const props = defineProps({
     tenant:   Object,
@@ -39,6 +40,14 @@ function formatCents(cents) {
 function formatDate(dateStr) {
     if (!dateStr) return '—'
     return new Date(dateStr).toLocaleDateString('pt-BR')
+}
+
+function maskDoc(doc) {
+    if (!doc) return '—'
+    const d = doc.replace(/\D/g, '')
+    if (d.length === 11) return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`
+    if (d.length === 14) return `**.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-**`
+    return doc
 }
 </script>
 
@@ -105,7 +114,14 @@ function formatDate(dateStr) {
                             <td class="px-4 py-3 font-mono text-xs">{{ b.external_ref }}</td>
                             <td class="px-4 py-3">
                                 <div class="font-medium">{{ b.payer_name }}</div>
-                                <div class="text-xs text-gray-500">{{ b.payer_document }}</div>
+                                <div class="text-xs text-gray-500">
+                                    <MaskedField
+                                        :value="b.payer_document"
+                                        :masked="maskDoc(b.payer_document)"
+                                        field="payer_document"
+                                        :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, b.id])"
+                                    />
+                                </div>
                             </td>
                             <td class="px-4 py-3 text-right font-medium">{{ formatCents(b.amount_cents) }}</td>
                             <td class="px-4 py-3 text-center">{{ formatDate(b.due_date) }}</td>

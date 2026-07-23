@@ -266,18 +266,31 @@ payproxy/
 │       ├── NotificationService.php
 │       ├── ReportService.php
 │       ├── SanitizationService.php
-│       └── CryptoService.php
+│       ├── CryptoService.php
+│       ├── ContribuinteService.php      # Busca boletos por CPF (regexp_replace PostgreSQL)
+│       ├── MeusDadosPdfService.php      # Gera PDF LGPD Art. 18 via DomPDF
+│       └── DataRetentionService.php     # Expurgo e anonimização LGPD (semanal)
 ├── database/migrations/
 ├── resources/js/                    # Vue 3 + Inertia (Pages + Components)
+│   ├── Components/
+│   │   └── MaskedField.vue           # Exibe dado mascarado com botão "Exibir" + audit POST
+│   ├── Layouts/
+│   │   └── ContribuinteLayout.vue    # Layout do Portal do Contribuinte (público)
 │   └── Pages/
 │       ├── ArDigital/
 │       │   └── ConfirmarRecebimento.vue  # Landing page pública AR Digital
+│       ├── Contribuinte/
+│       │   ├── Index.vue              # Tela de entrada (CPF) — envia link por e-mail
+│       │   ├── Debitos.vue            # Lista de débitos agrupados por município
+│       │   └── MeusDados.vue          # Dados pessoais + ações LGPD (exportar, solicitar exclusão)
 │       └── Backoffice/
-│           └── ArDigital/
-│               └── Config.vue            # Configuração AR Digital por tenant
+│           ├── ArDigital/
+│           │   └── Config.vue
+│           └── AnonymizationRequests/
+│               └── Index.vue          # Fila de solicitações de anonimização LGPD
 ├── routes/
 │   ├── api.php                      # API pública REST
-│   ├── web.php                      # Rotas Inertia + rotas públicas AR Digital
+│   ├── web.php                      # Rotas Inertia + rotas públicas (AR, contribuinte)
 │   └── channels.php                 # Reverb WebSocket
 └── docker-compose.yml
 ```
@@ -561,6 +574,53 @@ META_WA_API_VERSION=v19.0
 ```
 `META_WA_PHONE_ID` e `META_WA_ACCESS_TOKEN` são necessários apenas se Payproxy passar a enviar WhatsApp diretamente via Meta Graph API (não é o caso em v1 — OVC360 gerencia isso).
 
+---
+
+## Módulo Segurança & LGPD — Fase 2
+
+Implementado: expiração de API Keys, mascaramento de dados pessoais, consentimento WhatsApp e rotina de retenção.
+
+### Tabelas
+
+| Tabela | Propósito |
+|---|---|
+| `whatsapp_consents` | Consentimento LGPD por tenant + cpf_hash. Colunas: `tenant_id`, `cpf_hash`, `phone_hash`, `consented_at`, `consent_text_version`, `consent_ip`, `revoked_at`, `revocation_ip`. Unique em `[tenant_id, cpf_hash]`. |
+
+### Services / Helpers
+
+| Classe | Localização | Propósito |
+|---|---|---|
+| `MaskHelper` | `app/Helpers/MaskHelper.php` | Mascara CPF (`***.xxx.xxx-**`), e-mail (`r***@domain.com`) e telefone (`(XX) *****-XXXX`) |
+| `DataRetentionService` | `app/Services/DataRetentionService.php` | Anonimiza boletos/AR > 5 anos, purga audit_logs > 2 anos, purga API keys revogadas > 90 dias |
+| `WhatsappConsent` | `app/Models/WhatsappConsent.php` | `hasActiveConsent(tenantId, document)` e `grantConsent(tenantId, document, phone, ip)` |
+
+### Jobs / Commands
+
+| Artefato | Trigger | O que faz |
+|---|---|---|
+| `NotifyExpiringApiKeysJob` | Diário às 09:00 | E-mail ao tenant 15 e 7 dias antes do vencimento da API Key |
+| `RunDataRetentionCommand` | Semanal (dom 03:00) | Expurgo LGPD — suporta `--dry-run` para simulação segura |
+
+### Rotas adicionais
+
+```
+GET  /whatsapp-opt-in/{boleto}                              # Consentimento opt-in WhatsApp (signed URL, 30 dias)
+POST /backoffice/tenants/{tenant}/boletos/{boleto}/reveal-field  # Audit trail ao revelar dado mascarado
+```
+
+### Mascaramento de dados (UI)
+
+- `MaskedField.vue` exibe dado mascarado; ao clicar "Exibir" revela valor completo e dispara `POST reveal-field` (fire-and-forget)
+- Aplicado em `Boletos/Index.vue` (payer_document) e `Boletos/Show.vue` (payer_document, payer_email, payer_phone)
+- Mascaramento é feito no Vue, **não** no `BoletoResource` (API pública retorna dado completo — tenant tem acesso ao próprio dado)
+
+### Consentimento WhatsApp
+
+- `SendWhatsAppNotificationJob` verifica `WhatsappConsent::hasActiveConsent()` antes de enviar; se ausente, loga e pula
+- Link de opt-in gerado em `SendEmailNotificationJob` (evento `Issued`, tenant `email_whatsapp`, pagador sem consentimento)
+- URL assinada via `URL::signedRoute('whatsapp.opt-in', ...)` com validade de 30 dias
+- `cpf_hash = hash('sha256', digits_only_document)` — dado pessoal nunca armazenado em texto claro
+
 ### Testes
 
 #### Pirâmide de testes — 4 níveis
@@ -659,6 +719,76 @@ O banco `payproxy_test` deve existir no PostgreSQL local (criado uma única vez)
 ```sql
 CREATE DATABASE payproxy_test OWNER payproxy;
 ```
+
+---
+
+## Módulo Portal do Contribuinte — Fase 3
+
+Implementado: fluxo de acesso por CPF/CNPJ, listagem de débitos, aba "Meus Dados" LGPD e fila de anonimização no backoffice.
+
+### Tabelas
+
+| Tabela | Propósito |
+|---|---|
+| `contribuintes` | Entidade global (sem `tenant_id`). `cpf_hash` SHA-256 único. |
+| `contribuinte_access_tokens` | Token UUID por acesso. `cpf_encrypted` AES-256-GCM para lookup reverso. `expires_at` 24h. |
+| `anonymization_requests` | Solicitação de anonimização Art. 18 LGPD. `boleto_ids` JSON snapshottado na criação. Status: `pending` / `done` / `rejected`. |
+
+> **Nota:** `contribuinte_id` foi adicionado como FK nullable em `boletos` para futura associação automática (migração de dados ainda não executada — coluna existe, dados não populados).
+
+### Services
+
+| Classe | Localização | Propósito |
+|---|---|---|
+| `ContribuinteService` | `app/Services/ContribuinteService.php` | `findEmailByCpf`, `getBoletos`, `getPersonalData`, `getBoletoIdsByToken` — usa `regexp_replace(payer_document, '[^0-9]', '', 'g')` para lookup por CPF no PostgreSQL |
+| `MeusDadosPdfService` | `app/Services/MeusDadosPdfService.php` | Gera PDF LGPD Art. 18 via DomPDF usando `resources/views/pdf/meus-dados.blade.php` |
+
+### Controllers
+
+| Classe | Localização | Propósito |
+|---|---|---|
+| `ContribuinteController` | `app/Http/Controllers/ContribuinteController.php` | Portal público: show, verificar, debitos, meusDados, exportar, solicitarExclusao |
+| `AnonymizationRequestController` | `app/Http/Controllers/Backoffice/AnonymizationRequestController.php` | Backoffice: index (fila) + process (approve/reject) |
+
+### Rotas Portal do Contribuinte (`routes/web.php`)
+
+```
+GET  /contribuinte                             # Tela de entrada — CPF
+POST /contribuinte/verificar                   # Envia link por e-mail (throttle 5/15min)
+GET  /contribuinte/debitos/{token}             # Lista débitos por município
+GET  /contribuinte/meus-dados/{token}          # Dados pessoais + ações LGPD
+GET  /contribuinte/exportar/{token}            # Download PDF LGPD
+POST /contribuinte/solicitar-exclusao/{token}  # Cria AnonymizationRequest
+```
+
+### Rota Backoffice LGPD (`routes/web.php`)
+
+```
+GET  /backoffice/anonymization-requests                    # Fila de solicitações (auth.backoffice)
+POST /backoffice/anonymization-requests/{id}/process       # Aprovar ou rejeitar
+```
+
+### Fluxo de anonimização
+
+1. Contribuinte acessa `/contribuinte`, informa CPF → e-mail enviado com link único (24h)
+2. Clica no link → vê débitos ou aba "Meus Dados"
+3. Em "Meus Dados" solicita exclusão → `AnonymizationRequest` criada com `boleto_ids` snapshot
+4. Admin no backoffice aprova → campos `payer_name`, `payer_document`, `payer_email`, `payer_phone`, `payer_address` zerados nos boletos listados
+5. Dados fiscais (valores, vencimentos, referências) **não são apagados** — retenção legal 5 anos (CTN Art. 195)
+
+### Lookup de CPF no banco
+
+`payer_document` pode estar formatado (`000.000.000-00`) ou sem formatação (`00000000000`). O lookup usa:
+```sql
+regexp_replace(payer_document, '[^0-9]', '', 'g') = ?
+```
+O reverso (descriptografar CPF do token) usa `CryptoService::decrypt($token->cpf_encrypted)`.
+
+### Mail
+
+| Classe | View |
+|---|---|
+| `ContribuinteAccessLinkMail` | `resources/views/mail/contribuinte/access-link.blade.php` |
 
 ---
 

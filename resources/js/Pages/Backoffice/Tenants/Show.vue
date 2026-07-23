@@ -277,6 +277,7 @@ function formatDate(d) {
                                 <span class="font-medium text-sm text-[#2d5294]">{{ key.name }}</span>
                                 <span v-if="key.revoked_at" class="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">Revogada</span>
                                 <span v-else-if="key.expires_at && new Date(key.expires_at) < new Date()" class="text-xs bg-red-100 text-red-500 px-1.5 py-0.5 rounded-full">Expirada</span>
+                                <span v-else-if="key.expires_at && (new Date(key.expires_at) - new Date()) < 15 * 86400000" class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Expirando em breve</span>
                                 <span v-else class="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Ativa</span>
                             </div>
                             <div class="flex items-center gap-2 flex-wrap">

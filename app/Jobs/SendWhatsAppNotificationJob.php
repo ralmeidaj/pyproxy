@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Enums\CommunicationModel;
 use App\Enums\NotificationEvent;
 use App\Models\Boleto;
 use App\Models\NotificationLog;
+use App\Models\WhatsappConsent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
@@ -30,6 +32,25 @@ class SendWhatsAppNotificationJob implements ShouldQueue
         if (! $boleto || ! $boleto->payer_phone) {
             $this->updateLog('failed', 'Boleto não encontrado ou sem telefone');
             return;
+        }
+
+        // Verificar consentimento LGPD para tenants com WhatsApp ativo
+        if ($boleto->tenant?->communication_model === CommunicationModel::EmailWhatsApp) {
+            if (! $boleto->payer_document) {
+                Log::info('[WhatsApp] Pagador sem CPF/CNPJ — consentimento não verificável, envio abortado', [
+                    'boleto_id' => $boleto->id,
+                    'tenant_id' => $boleto->tenant_id,
+                ]);
+                return;
+            }
+
+            if (! WhatsappConsent::hasActiveConsent($boleto->tenant_id, $boleto->payer_document)) {
+                Log::info('[WhatsApp] Sem consentimento LGPD — envio pulado', [
+                    'boleto_id' => $boleto->id,
+                    'tenant_id' => $boleto->tenant_id,
+                ]);
+                return;
+            }
         }
 
         $event = NotificationEvent::from($this->event);

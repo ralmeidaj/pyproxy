@@ -526,13 +526,20 @@ tenant, tipo de operação, ator e período.
 
 **RF-CONT-11** Rotas públicas do portal:
 ```
-GET  /contribuinte                          → tela de entrada (CPF)
-POST /contribuinte/verificar                → envia link por e-mail (token 24h, 1 uso)
-GET  /contribuinte/debitos/{token}          → lista de débitos agrupados por município
-POST /contribuinte/boleto/{id}/2via         → emite 2ª via e redireciona para o novo boleto
+GET  /contribuinte                                    → tela de entrada (CPF)
+POST /contribuinte/verificar                          → envia link por e-mail (token 24h, 1 uso)
+GET  /contribuinte/debitos/{token}                    → lista de débitos agrupados por município
+POST /contribuinte/boleto/{id}/2via                   → emite 2ª via e redireciona para o novo boleto
+GET  /contribuinte/meus-dados/{token}                 → aba LGPD: exibe dados pessoais armazenados (Art. 18)
+POST /contribuinte/meus-dados/{token}/exportar        → gera e baixa PDF com todos os dados do CPF
+POST /contribuinte/meus-dados/{token}/solicitar-exclusao → abre ticket de anonimização no backoffice
 ```
 
-**RF-CONT-12** O portal exibe aviso de conformidade LGPD informando quais dados são utilizados e com qual finalidade.
+**RF-CONT-12** O portal exibe aviso de conformidade LGPD informando quais dados são utilizados e com qual finalidade. A aba "Meus Dados" dá acesso completo aos direitos do Art. 18 da LGPD a partir da mesma sessão autenticada do portal.
+
+**RF-CONT-13** A aba "Meus Dados" exibe todos os dados pessoais armazenados associados ao CPF: nome, e-mail, telefone, endereço e histórico de boletos (dados fiscais anonimizados após 5 anos conforme CTN Art. 195). O contribuinte pode exportar um relatório PDF completo com todos os dados.
+
+**RF-CONT-14** A solicitação de exclusão gera ticket no backoffice com status `PENDENTE`. A exclusão é implementada como **anonimização** — nunca deleção — com aviso explícito ao titular de que dados fiscais são retidos por 5 anos conforme CTN Art. 195. O administrador executa a anonimização no backoffice após análise. O token utilizado é o mesmo `contribuinte_access_tokens` do fluxo de débitos — não é criada tabela separada.
 
 ---
 
@@ -717,18 +724,11 @@ O operador visualiza todos os eventos do contribuinte dentro do seu tenant. A bu
 
 ### 1.23 Segurança & Conformidade LGPD
 
-#### 1.23.1 Portal do Titular (Art. 18 LGPD)
+#### 1.23.1 Direitos do Titular (Art. 18 LGPD) — integrado ao Portal do Contribuinte
 
-**RF-LGPD-01** A plataforma deve disponibilizar portal público do titular de dados, acessível pelo contribuinte para exercer seus direitos previstos no Art. 18 da LGPD, sem necessidade de cadastro prévio. Rotas públicas:
-```
-GET  /titular/verificar                    → tela de verificação por CPF
-POST /titular/verificar                    → envia link por e-mail (token 24h, uso único)
-GET  /titular/dados/{token}                → exibe dados do titular
-POST /titular/exportar/{token}             → gera PDF com todos os dados associados ao CPF
-POST /titular/solicitar-exclusao/{token}   → abre ticket de anonimização no backoffice
-```
+**RF-LGPD-01** Os direitos do titular previstos no Art. 18 da LGPD são exercidos diretamente no **Portal do Contribuinte** (`/contribuinte`), sem portal separado. A funcionalidade é acessada pela aba "Meus Dados" após autenticação por CPF. As rotas específicas são definidas em RF-CONT-11. Não existe URL `/titular` — essa decisão arquitetural foi tomada para evitar duplicidade de autenticação e simplificar a jornada do cidadão.
 
-**RF-LGPD-02** O acesso ao portal do titular é autenticado por CPF + link temporário enviado por e-mail (token de uso único, validade 24 horas), sem senha ou cadastro. O token é armazenado na tabela `titular_access_tokens` com `cpf_hash`, `expires_at` e `used_at`.
+**RF-LGPD-02** O acesso à aba "Meus Dados" utiliza o mesmo token de sessão do Portal do Contribuinte (`contribuinte_access_tokens`: `cpf_hash`, `token`, `expires_at`, `used_at`). Não é criada tabela separada `titular_access_tokens`.
 
 **RF-LGPD-03** O portal do titular exibe todos os boletos associados ao CPF informado, agrupados por tenant (município), com: data de emissão, valor, status, tipo de tributo e canal de pagamento utilizado quando liquidado.
 

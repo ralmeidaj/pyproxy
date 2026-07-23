@@ -1,5 +1,6 @@
 <script setup>
 import BackofficeLayout from '@/Layouts/BackofficeLayout.vue'
+import MaskedField from '@/Components/MaskedField.vue'
 
 const props = defineProps({
     tenant:            Object,
@@ -77,6 +78,34 @@ const NOTIF_CHANNEL_ICONS = {
 function formatCents(cents) {
     if (cents == null) return '—'
     return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function maskDoc(doc) {
+    if (!doc) return '—'
+    const d = doc.replace(/\D/g, '')
+    if (d.length === 11) return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`
+    if (d.length === 14) return `**.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-**`
+    return doc
+}
+
+function maskEmail(email) {
+    if (!email) return '—'
+    const [user, domain] = email.split('@')
+    if (!domain) return email
+    return user.slice(0, 1) + '***@' + domain
+}
+
+function maskPhone(phone) {
+    if (!phone) return '—'
+    const d = phone.replace(/\D/g, '')
+    if (d.length === 11) return `(${d.slice(0,2)}) *****-${d.slice(7)}`
+    if (d.length === 10) return `(${d.slice(0,2)}) ****-${d.slice(6)}`
+    return phone
+}
+
+function maskRecipient(log) {
+    if (!log.recipient) return '—'
+    return log.channel === 'whatsapp' ? maskPhone(log.recipient) : maskEmail(log.recipient)
 }
 
 function formatDate(dateStr) {
@@ -169,15 +198,36 @@ function copyText(text) {
                         </div>
                         <div>
                             <dt class="text-gray-500">CPF/CNPJ</dt>
-                            <dd class="font-mono">{{ boleto.payer_document }}</dd>
+                            <dd>
+                                <MaskedField
+                                    :value="boleto.payer_document"
+                                    :masked="maskDoc(boleto.payer_document)"
+                                    field="payer_document"
+                                    :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                                />
+                            </dd>
                         </div>
                         <div>
                             <dt class="text-gray-500">E-mail</dt>
-                            <dd>{{ boleto.payer_email }}</dd>
+                            <dd>
+                                <MaskedField
+                                    :value="boleto.payer_email"
+                                    :masked="maskEmail(boleto.payer_email)"
+                                    field="payer_email"
+                                    :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                                />
+                            </dd>
                         </div>
                         <div>
                             <dt class="text-gray-500">Telefone</dt>
-                            <dd>{{ boleto.payer_phone ?? '—' }}</dd>
+                            <dd>
+                                <MaskedField
+                                    :value="boleto.payer_phone"
+                                    :masked="maskPhone(boleto.payer_phone)"
+                                    field="payer_phone"
+                                    :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                                />
+                            </dd>
                         </div>
                         <div class="col-span-2">
                             <dt class="text-gray-500">Endereço</dt>
@@ -289,7 +339,12 @@ function copyText(text) {
                                         </span>
                                     </td>
                                     <td class="py-2.5 pr-4 text-gray-500 text-xs font-mono truncate max-w-[180px]">
-                                        {{ log.recipient }}
+                                        <MaskedField
+                                            :value="log.recipient"
+                                            :masked="maskRecipient(log)"
+                                            :field="'notification_recipient_' + log.id"
+                                            :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                                        />
                                     </td>
                                     <td class="py-2.5 pr-4">
                                         <span :class="['px-2 py-0.5 rounded-full text-xs font-medium', NOTIF_STATUS_COLORS[log.status] ?? 'bg-gray-100 text-gray-600']">
@@ -325,9 +380,20 @@ function copyText(text) {
                         <span :class="['px-2.5 py-1 rounded-full text-xs font-semibold', AR_STATUS_COLORS[ar.status] ?? 'bg-gray-100 text-gray-600']">
                             {{ AR_STATUS_LABELS[ar.status] ?? ar.status }}
                         </span>
-                        <span class="text-xs text-gray-400 font-mono">{{ ar.destinatario_email }}</span>
-                        <span v-if="ar.destinatario_whatsapp" class="text-xs text-gray-400">
-                            💬 {{ ar.destinatario_whatsapp }}
+                        <MaskedField
+                            :value="ar.destinatario_email"
+                            :masked="maskEmail(ar.destinatario_email)"
+                            field="ar_destinatario_email"
+                            :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                            class="text-xs text-gray-400 font-mono"
+                        />
+                        <span v-if="ar.destinatario_whatsapp" class="text-xs text-gray-400 flex items-center gap-1">
+                            💬 <MaskedField
+                                :value="ar.destinatario_whatsapp"
+                                :masked="maskPhone(ar.destinatario_whatsapp)"
+                                field="ar_destinatario_whatsapp"
+                                :audit-url="route('backoffice.tenants.boletos.reveal-field', [tenant.id, boleto.id])"
+                            />
                         </span>
                         <span class="ml-auto text-xs text-gray-400">{{ formatDate(ar.created_at) }}</span>
                     </div>

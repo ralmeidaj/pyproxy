@@ -9,6 +9,7 @@ use App\Http\Resources\BoletoResource;
 use App\Models\ApiKey;
 use App\Models\ApiKeyUsageDaily;
 use App\Models\Boleto;
+use App\Services\AuditLogService;
 use App\Services\BoletoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,10 @@ use OpenApi\Attributes as OA;
 
 class BoletoController extends Controller
 {
-    public function __construct(private readonly BoletoService $boletoService) {}
+    public function __construct(
+        private readonly BoletoService   $boletoService,
+        private readonly AuditLogService $auditLog,
+    ) {}
 
     #[OA\Post(
         path: '/boletos',
@@ -135,6 +139,18 @@ class BoletoController extends Controller
         if ($boleto->tenant_id !== $tenant->id) {
             abort(404);
         }
+
+        $this->auditLog->record(
+            action:       'boleto.personal_data.accessed',
+            resourceType: 'Boleto',
+            resourceId:   $boleto->id,
+            actorType:    'api_key',
+            actorId:      $apiKey->id,
+            actorLabel:   $apiKey->key_prefix,
+            tenantId:     $tenant->id,
+            payload:      ['fields' => ['payer_name', 'payer_document', 'payer_email', 'payer_phone']],
+            ip:           $request->ip(),
+        );
 
         return new BoletoResource($boleto->load('splits'));
     }

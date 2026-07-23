@@ -6,9 +6,12 @@ use App\Enums\BoletoStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Boleto;
 use App\Models\Tenant;
+use App\Services\AuditLogService;
 use App\Services\BoletoService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -65,6 +68,28 @@ class BoletoController extends Controller
             'notificationLogs' => $notificationLogs,
             'arNotifications'  => $arNotifications,
         ]);
+    }
+
+    public function revealField(Request $request, Tenant $tenant, Boleto $boleto): JsonResponse
+    {
+        abort_if($boleto->tenant_id !== $tenant->id, 404);
+
+        $field = $request->input('field', 'unknown');
+        $actor = Auth::guard('backoffice')->user();
+
+        app(AuditLogService::class)->record(
+            action:       'boleto.field.revealed',
+            resourceType: 'Boleto',
+            resourceId:   $boleto->id,
+            actorType:    'backoffice_user',
+            actorId:      $actor?->id,
+            actorLabel:   $actor?->email ?? 'system',
+            tenantId:     $tenant->id,
+            payload:      ['field' => $field],
+            ip:           $request->ip(),
+        );
+
+        return response()->json(['ok' => true]);
     }
 
     public function downloadLaudo(Tenant $tenant, Boleto $boleto): \Symfony\Component\HttpFoundation\Response

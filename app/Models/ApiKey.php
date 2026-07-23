@@ -57,6 +57,13 @@ class ApiKey extends Model
             && (is_null($this->expires_at) || $this->expires_at->isFuture());
     }
 
+    public function isExpiringSoon(int $days = 15): bool
+    {
+        return $this->isActive()
+            && $this->expires_at !== null
+            && $this->expires_at->isBefore(now()->addDays($days));
+    }
+
     public function hasScope(string $scope): bool
     {
         return in_array($scope, $this->scopes ?? [], true);

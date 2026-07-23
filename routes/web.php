@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Backoffice\AnonymizationRequestController;
 use App\Http\Controllers\Backoffice\ApiKeyController;
 use App\Http\Controllers\Backoffice\ArDigitalConfigController;
 use App\Http\Controllers\Backoffice\AuditLogController;
@@ -13,7 +14,9 @@ use App\Http\Controllers\Backoffice\ReportController;
 use App\Http\Controllers\Backoffice\SplitConfigController;
 use App\Http\Controllers\Backoffice\TenantController;
 use App\Http\Controllers\ArTrackingController;
+use App\Http\Controllers\ContribuinteController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\WhatsappConsentController;
 use App\Http\Controllers\Portal\Auth\AcceptInviteController;
 use App\Http\Controllers\Portal\Auth\ChangePasswordController as PortalChangePasswordController;
 use App\Http\Controllers\Portal\Auth\LoginController as PortalLoginController;
@@ -37,6 +40,10 @@ Route::prefix('ar')->name('ar.')->group(function () {
     Route::get('boleto/{token}',            [ArTrackingController::class, 'exibirBoleto'])->name('boleto.show');
     Route::post('boleto/{token}/confirmar', [ArTrackingController::class, 'confirmarRecebimento'])->name('boleto.confirmar');
 });
+
+// WhatsApp opt-in — link assinado enviado por e-mail (sem autenticação)
+Route::get('whatsapp-opt-in/{boleto}', [WhatsappConsentController::class, 'optIn'])
+    ->name('whatsapp.opt-in');
 
 // ─────────────────────────────────────────────
 // Debug — apenas em ambientes não-produção
@@ -165,6 +172,8 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
             ->name('tenants.boletos.index');
         Route::get('tenants/{tenant}/boletos/{boleto}', [BoletoController::class, 'show'])
             ->name('tenants.boletos.show');
+        Route::post('tenants/{tenant}/boletos/{boleto}/reveal-field', [BoletoController::class, 'revealField'])
+            ->name('tenants.boletos.reveal-field');
         Route::get('tenants/{tenant}/boletos/{boleto}/ar-laudo', [BoletoController::class, 'downloadLaudo'])
             ->name('tenants.boletos.ar-laudo');
 
@@ -177,7 +186,26 @@ Route::prefix('backoffice')->name('backoffice.')->group(function () {
         Route::post('reports/export', [ReportController::class, 'export'])->name('reports.export');
 
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+
+        // LGPD — Solicitações de anonimização
+        Route::get('anonymization-requests', [AnonymizationRequestController::class, 'index'])
+            ->name('anonymization-requests.index');
+        Route::post('anonymization-requests/{anonymizationRequest}/process', [AnonymizationRequestController::class, 'process'])
+            ->name('anonymization-requests.process');
     });
+});
+
+// ─────────────────────────────────────────────
+// Portal do Contribuinte — /contribuinte/*
+// ─────────────────────────────────────────────
+Route::prefix('contribuinte')->name('contribuinte.')->group(function () {
+    Route::get('/',           [ContribuinteController::class, 'show'])->name('show');
+    Route::post('/verificar', [ContribuinteController::class, 'verificar'])->name('verificar')->middleware('throttle:5,15');
+
+    Route::get('/debitos/{token}',             [ContribuinteController::class, 'debitos'])->name('debitos');
+    Route::get('/meus-dados/{token}',          [ContribuinteController::class, 'meusDados'])->name('meus-dados');
+    Route::get('/exportar/{token}',            [ContribuinteController::class, 'exportar'])->name('exportar');
+    Route::post('/solicitar-exclusao/{token}', [ContribuinteController::class, 'solicitarExclusao'])->name('solicitar-exclusao');
 });
 
 // ─────────────────────────────────────────────

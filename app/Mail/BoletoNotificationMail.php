@@ -20,6 +20,7 @@ class BoletoNotificationMail extends Mailable
         public readonly NotificationEvent $event,
         public readonly ?ArDigitalNotification $arNotification = null,
         public readonly bool $pixelTracking = false,
+        public readonly ?string $whatsappOptInUrl = null,
     ) {}
 
     public function envelope(): Envelope

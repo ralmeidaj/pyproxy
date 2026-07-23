@@ -8,6 +8,7 @@ use App\Enums\BoletoStatus;
 use App\Exceptions\BoletoCannotBeCancelledException;
 use App\Models\Boleto;
 use App\Models\Tenant;
+use App\Services\ArDigitalService;
 use App\Services\AuditLogService;
 use App\Services\BankPartners\BankPartnerFactory;
 use App\Services\BoletoService;
@@ -19,6 +20,7 @@ class BoletoServiceTest extends TestCase
     private BankPartnerFactory $factory;
     private SplitService       $splitService;
     private AuditLogService    $auditLog;
+    private ArDigitalService   $arDigital;
     private BoletoService      $service;
 
     protected function setUp(): void
@@ -28,11 +30,13 @@ class BoletoServiceTest extends TestCase
         $this->factory      = $this->createMock(BankPartnerFactory::class);
         $this->splitService = $this->createMock(SplitService::class);
         $this->auditLog     = $this->createMock(AuditLogService::class);
+        $this->arDigital    = $this->createMock(ArDigitalService::class);
 
         $this->service = new BoletoService(
             $this->factory,
             $this->splitService,
             $this->auditLog,
+            $this->arDigital,
         );
     }
 

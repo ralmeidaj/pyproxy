@@ -219,22 +219,26 @@ app/
 | `GET` | `/api/webhooks/meta-whatsapp` | Verificação do webhook Meta |
 | `POST` | `/api/webhooks/meta-whatsapp` | Eventos de entrega WhatsApp |
 
-### Portal do Contribuinte
+### Portal do Contribuinte + LGPD (Fase 3 — implementado)
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/contribuinte` | Tela de entrada (CPF) |
-| `POST` | `/contribuinte/verificar` | Envia link por e-mail (token 24h) |
+| `GET` | `/contribuinte` | Tela de entrada (CPF ou CNPJ) |
+| `POST` | `/contribuinte/verificar` | Envia link de acesso por e-mail (token UUID 24h, throttle 5/15min) |
 | `GET` | `/contribuinte/debitos/{token}` | Lista débitos agrupados por município |
-| `POST` | `/contribuinte/boleto/{id}/2via` | Emite 2ª via e redireciona |
+| `GET` | `/contribuinte/meus-dados/{token}` | Dados pessoais + ações LGPD Art. 18 |
+| `GET` | `/contribuinte/exportar/{token}` | Download PDF com dados pessoais e histórico |
+| `POST` | `/contribuinte/solicitar-exclusao/{token}` | Cria solicitação de anonimização no backoffice |
 
-### Portal do Titular LGPD
+### LGPD Backoffice — Fila de Anonimização
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/titular/verificar` | Tela de verificação por CPF |
-| `POST` | `/titular/verificar` | Envia link por e-mail (token 24h) |
-| `GET` | `/titular/dados/{token}` | Exibe dados do titular |
-| `POST` | `/titular/exportar/{token}` | Gera PDF com todos os dados |
-| `POST` | `/titular/solicitar-exclusao/{token}` | Abre ticket de anonimização |
+| `GET` | `/backoffice/anonymization-requests` | Fila de solicitações pendentes (auth.backoffice) |
+| `POST` | `/backoffice/anonymization-requests/{id}/process` | Aprovar (anonimiza dados) ou rejeitar |
+
+### WhatsApp Opt-in
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/whatsapp-opt-in/{boleto}` | Registra consentimento LGPD para WhatsApp (signed URL, 30 dias) |
 
 ---
 
